@@ -1,0 +1,27 @@
+{
+  "APP_VERSION": "0.1.0",
+  "TEST_DURATION_SEC": 60,
+  "COOLDOWN_HOURS": 2,
+  "ALIAS_RULE": {
+    "length": 4,
+    "letters": 2,
+    "digits": 2,
+    "allow_any_order": true
+  },
+  "HASHING": {
+    "salt": "reading-uni-fatigue-pilot-2026-7f3a9c2d0e1b4a6c9d8e7f6a5b4c3d2e"
+  },
+  "WEIGHTS": {
+    "pvt": 0.35,
+    "stroop": 0.25,
+    "nback": 0.20,
+    "sdmt": 0.20
+  },
+  "BANDS": [
+    { "min": 85, "label": "Green", "advice": "Sharp. Maintain pace and hydrate." },
+    { "min": 70, "label": "Yellow", "advice": "Okay. Take a brief reset when possible." },
+    { "min": 55, "label": "Amber", "advice": "Caution. Consider a short break and reduce multitasking." },
+    { "min": 0,  "label": "Red", "advice": "Fatigue likely. Prioritise rest if safe/possible." }
+  ],
+  "LOG_TRIAL_LEVEL": false
+}
