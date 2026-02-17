@@ -1,4 +1,26 @@
-const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbzHVTYY7JRASImK0k8YoMJxBAYuKVd9SnmTCPOWWXMjOUJUWeBW4uvy_mT6AKn-ptsuMQ/exec";
+// Google Form endpoint (POST here)
+const FORM_RESPONSE_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfSO6_C_mIWA1G1OHuCwPIaOn_srffgsm6XmM8Y2SKKwhGyBA/formResponse";
+
+// Map your form fields to entry IDs (from your prefilled link)
+const ENTRY = {
+  timestamp_utc: "entry.1572758946",
+  session_id: "entry.1944994785",
+  alias_hash: "entry.1791040349",
+  app_version: "entry.1171626104",
+  device_info: "entry.556106516",
+  session_number_today: "entry.187344393",
+  is_first_session_today: "entry.1633018053",
+
+  sleep_hours: "entry.1121567346",
+  shift_length_hours: "entry.978814771",
+  hours_into_shift: "entry.1639077315",
+  caffeine_level: "entry.563674604",
+  fatigue_scale: "entry.1736915856",
+  motivation_scale: "entry.884871826",
+  symptoms: "entry.1133216744",
+  age: "entry.1773262357"
+};
 
 let CONFIG = null;
 
@@ -15,18 +37,22 @@ function normalizeAlias(raw) {
 function isValidAlias(alias) {
   if (!alias || alias.length !== 4) return false;
   const chars = alias.split("");
-  const letters = chars.filter(c => /[A-Z]/.test(c)).length;
-  const digits = chars.filter(c => /[0-9]/.test(c)).length;
+  const letters = chars.filter((c) => /[A-Z]/.test(c)).length;
+  const digits = chars.filter((c) => /[0-9]/.test(c)).length;
   return letters === 2 && digits === 2;
 }
 
 async function sha256Hex(str) {
   const enc = new TextEncoder().encode(str);
   const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-function nowMs() { return Date.now(); }
+function nowMs() {
+  return Date.now();
+}
 
 function getCooldownUntilMs(aliasHash) {
   const key = `cooldown_until_${aliasHash}`;
@@ -40,7 +66,10 @@ function setCooldownUntilMs(aliasHash, untilMs) {
 
 function getTodayKey() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function getSessionCountToday(aliasHash) {
@@ -66,7 +95,9 @@ function getCachedAge(aliasHash) {
 }
 
 function selectedSymptoms() {
-  return Array.from(document.querySelectorAll(".symptom:checked")).map(x => x.value);
+  return Array.from(document.querySelectorAll(".symptom:checked")).map(
+    (x) => x.value
+  );
 }
 
 function deviceInfo() {
@@ -77,24 +108,67 @@ function uuidv4() {
   return crypto.randomUUID();
 }
 
-function show(id) { document.getElementById(id).classList.remove("hidden"); }
-function hide(id) { document.getElementById(id).classList.add("hidden"); }
+function show(id) {
+  document.getElementById(id).classList.remove("hidden");
+}
+function hide(id) {
+  document.getElementById(id).classList.add("hidden");
+}
 
 function formatCountdown(ms) {
-  const s = Math.max(0, Math.floor(ms/1000));
-  const hh = String(Math.floor(s/3600)).padStart(2,"0");
-  const mm = String(Math.floor((s%3600)/60)).padStart(2,"0");
-  const ss = String(s%60).padStart(2,"0");
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
 }
 
-async function postSession(payload) {
-  const res = await fetch(ENDPOINT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  return await res.json();
+/**
+ * Submit to Google Form.
+ * IMPORTANT: mode:'no-cors' means we can't read the response body/status
+ * (that's normal). If fetch resolves, we treat it as sent.
+ */
+async function submitToGoogleForm(payload) {
+  const form = new URLSearchParams();
+
+  // Core IDs
+  form.append(ENTRY.timestamp_utc, payload.timestamp_utc || "");
+  form.append(ENTRY.session_id, payload.session_id || "");
+  form.append(ENTRY.alias_hash, payload.alias_hash || "");
+  form.append(ENTRY.app_version, payload.app_version || "");
+  form.append(ENTRY.device_info, payload.device_info || "");
+  form.append(ENTRY.session_number_today, String(payload.session_number_today ?? ""));
+  form.append(ENTRY.is_first_session_today, String(payload.is_first_session_today ?? ""));
+
+  // Check-in
+  form.append(ENTRY.sleep_hours, String(payload.checkin?.sleep_hours ?? ""));
+  form.append(ENTRY.shift_length_hours, String(payload.checkin?.shift_length_hours ?? ""));
+  form.append(ENTRY.hours_into_shift, String(payload.checkin?.hours_into_shift ?? ""));
+  form.append(ENTRY.caffeine_level, String(payload.checkin?.caffeine_level ?? ""));
+  form.append(ENTRY.fatigue_scale, String(payload.checkin?.fatigue_scale ?? ""));
+  form.append(ENTRY.motivation_scale, String(payload.checkin?.motivation_scale ?? ""));
+  form.append(ENTRY.symptoms, String((payload.checkin?.symptoms || []).join("|")));
+  form.append(ENTRY.age, String(payload.checkin?.age ?? ""));
+
+  // Add a timeout so it doesn't hang forever
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    await fetch(FORM_RESPONSE_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+      signal: controller.signal
+    });
+
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 async function main() {
@@ -119,7 +193,8 @@ async function main() {
     currentAlias = normalizeAlias(aliasInput.value);
 
     if (!isValidAlias(currentAlias)) {
-      aliasError.textContent = "Invalid code format. Must be 4 chars: 2 letters + 2 numbers (any order).";
+      aliasError.textContent =
+        "Invalid code format. Must be 4 chars: 2 letters + 2 numbers (any order).";
       return;
     }
 
@@ -157,7 +232,7 @@ async function main() {
 
   cooldownOverrideBtn.addEventListener("click", () => {
     const pw = prompt("Admin password:");
-    // For pilot: simple client-side gate (we can strengthen later)
+    // Pilot-only simple gate
     if (pw === "ADMIN123") {
       overrideMsg.textContent = "Override enabled. You may check-in now.";
       hide("cooldownSection");
@@ -179,7 +254,6 @@ async function main() {
     const motivation_scale = Number(document.getElementById("motivation").value || "");
     const age = Number(document.getElementById("age").value || "");
 
-    // Cache age once if provided
     if (age) cacheAgeIfProvided(aliasHash, age);
 
     const sessionNumberToday = incrementSessionCountToday(aliasHash);
@@ -188,7 +262,6 @@ async function main() {
     const payload = {
       timestamp_utc: new Date().toISOString(),
       session_id: uuidv4(),
-      participant_id: aliasHash,       // stable per user
       alias_hash: aliasHash,
       app_version: CONFIG.APP_VERSION,
       device_info: deviceInfo(),
@@ -207,26 +280,24 @@ async function main() {
     };
 
     // Local failsafe copy
-    const localKey = `session_${payload.session_id}`;
-    localStorage.setItem(localKey, JSON.stringify(payload));
+    localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
 
-    try {
-      const resp = await postSession(payload);
-      if (resp && resp.ok) {
-        submitMsg.textContent = "Saved. (Next: we'll launch the tests.)";
-        // Set cooldown now (2 hours)
-        const until = nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000;
-        setCooldownUntilMs(aliasHash, until);
+    // Submit to Google Form
+    const resp = await submitToGoogleForm(payload);
 
-        // NEXT STEP: route to SDMT page (we implement next)
-      } else {
-        submitMsg.textContent = `Upload failed (data saved locally). Error: ${resp?.error || "unknown"}`;
-      }
-    } catch (e) {
-      submitMsg.textContent = `Upload failed (data saved locally). Error: ${String(e)}`;
-    } finally {
-      submitBtn.disabled = false;
+    if (resp.ok) {
+      submitMsg.textContent = "Saved. (Next: we'll launch the tests.)";
+      // Set 2-hour cooldown
+      const until = nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000;
+      setCooldownUntilMs(aliasHash, until);
+
+      // NEXT STEP: route to SDMT screen (we’ll implement next)
+    } else {
+      submitMsg.textContent =
+        "Upload failed (data saved locally). Error: " + (resp.error || "unknown");
     }
+
+    submitBtn.disabled = false;
   });
 }
 
