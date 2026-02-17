@@ -1,8 +1,11 @@
-// Google Form endpoint (POST here)
+// ===============================
+// Google Form submission (NO fetch)
+// ===============================
+
 const FORM_RESPONSE_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfSO6_C_mIWA1G1OHuCwPIaOn_srffgsm6XmM8Y2SKKwhGyBA/formResponse";
 
-// Map your form fields to entry IDs (from your prefilled link)
+// Entry IDs from your prefilled link (15 fields)
 const ENTRY = {
   timestamp_utc: "entry.1572758946",
   session_id: "entry.1944994785",
@@ -19,11 +22,14 @@ const ENTRY = {
   fatigue_scale: "entry.1736915856",
   motivation_scale: "entry.884871826",
   symptoms: "entry.1133216744",
-  age: "entry.1773262357"
+  age: "entry.1773262357",
 };
 
 let CONFIG = null;
 
+// --------------------
+// Utilities
+// --------------------
 async function loadConfig() {
   const res = await fetch("config.json", { cache: "no-store" });
   CONFIG = await res.json();
@@ -33,7 +39,6 @@ function normalizeAlias(raw) {
   return (raw || "").trim().toUpperCase();
 }
 
-// Exactly 4 chars, exactly 2 letters and 2 digits, any order
 function isValidAlias(alias) {
   if (!alias || alias.length !== 4) return false;
   const chars = alias.split("");
@@ -55,8 +60,7 @@ function nowMs() {
 }
 
 function getCooldownUntilMs(aliasHash) {
-  const key = `cooldown_until_${aliasHash}`;
-  const v = localStorage.getItem(key);
+  const v = localStorage.getItem(`cooldown_until_${aliasHash}`);
   return v ? Number(v) : 0;
 }
 
@@ -73,8 +77,7 @@ function getTodayKey() {
 }
 
 function getSessionCountToday(aliasHash) {
-  const key = `sessions_${aliasHash}_${getTodayKey()}`;
-  return Number(localStorage.getItem(key) || "0");
+  return Number(localStorage.getItem(`sessions_${aliasHash}_${getTodayKey()}`) || "0");
 }
 
 function incrementSessionCountToday(aliasHash) {
@@ -95,13 +98,11 @@ function getCachedAge(aliasHash) {
 }
 
 function selectedSymptoms() {
-  return Array.from(document.querySelectorAll(".symptom:checked")).map(
-    (x) => x.value
-  );
+  return Array.from(document.querySelectorAll(".symptom:checked")).map((x) => x.value);
 }
 
 function deviceInfo() {
-  return `${navigator.userAgent}`;
+  return navigator.userAgent;
 }
 
 function uuidv4() {
@@ -123,54 +124,65 @@ function formatCountdown(ms) {
   return `${hh}:${mm}:${ss}`;
 }
 
-/**
- * Submit to Google Form.
- * IMPORTANT: mode:'no-cors' means we can't read the response body/status
- * (that's normal). If fetch resolves, we treat it as sent.
- */
-async function submitToGoogleForm(payload) {
-  const form = new URLSearchParams();
+// --------------------
+// Google Forms submit WITHOUT fetch
+// --------------------
+function submitToGoogleForm(payload) {
+  // Create hidden iframe so page doesn't navigate away
+  let iframe = document.getElementById("gf_hidden_iframe");
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.id = "gf_hidden_iframe";
+    iframe.name = "gf_hidden_iframe";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+  }
+
+  const form = document.createElement("form");
+  form.action = FORM_RESPONSE_URL;
+  form.method = "POST";
+  form.target = "gf_hidden_iframe";
+  form.style.display = "none";
+
+  const add = (name, value) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value ?? "";
+    form.appendChild(input);
+  };
 
   // Core IDs
-  form.append(ENTRY.timestamp_utc, payload.timestamp_utc || "");
-  form.append(ENTRY.session_id, payload.session_id || "");
-  form.append(ENTRY.alias_hash, payload.alias_hash || "");
-  form.append(ENTRY.app_version, payload.app_version || "");
-  form.append(ENTRY.device_info, payload.device_info || "");
-  form.append(ENTRY.session_number_today, String(payload.session_number_today ?? ""));
-  form.append(ENTRY.is_first_session_today, String(payload.is_first_session_today ?? ""));
+  add(ENTRY.timestamp_utc, payload.timestamp_utc || "");
+  add(ENTRY.session_id, payload.session_id || "");
+  add(ENTRY.alias_hash, payload.alias_hash || "");
+  add(ENTRY.app_version, payload.app_version || "");
+  add(ENTRY.device_info, payload.device_info || "");
+  add(ENTRY.session_number_today, String(payload.session_number_today ?? ""));
+  add(ENTRY.is_first_session_today, String(payload.is_first_session_today ?? ""));
 
   // Check-in
-  form.append(ENTRY.sleep_hours, String(payload.checkin?.sleep_hours ?? ""));
-  form.append(ENTRY.shift_length_hours, String(payload.checkin?.shift_length_hours ?? ""));
-  form.append(ENTRY.hours_into_shift, String(payload.checkin?.hours_into_shift ?? ""));
-  form.append(ENTRY.caffeine_level, String(payload.checkin?.caffeine_level ?? ""));
-  form.append(ENTRY.fatigue_scale, String(payload.checkin?.fatigue_scale ?? ""));
-  form.append(ENTRY.motivation_scale, String(payload.checkin?.motivation_scale ?? ""));
-  form.append(ENTRY.symptoms, String((payload.checkin?.symptoms || []).join("|")));
-  form.append(ENTRY.age, String(payload.checkin?.age ?? ""));
+  add(ENTRY.sleep_hours, String(payload.checkin?.sleep_hours ?? ""));
+  add(ENTRY.shift_length_hours, String(payload.checkin?.shift_length_hours ?? ""));
+  add(ENTRY.hours_into_shift, String(payload.checkin?.hours_into_shift ?? ""));
+  add(ENTRY.caffeine_level, String(payload.checkin?.caffeine_level ?? ""));
+  add(ENTRY.fatigue_scale, String(payload.checkin?.fatigue_scale ?? ""));
+  add(ENTRY.motivation_scale, String(payload.checkin?.motivation_scale ?? ""));
+  add(ENTRY.symptoms, String((payload.checkin?.symptoms || []).join("|")));
+  add(ENTRY.age, String(payload.checkin?.age ?? ""));
 
-  // Add a timeout so it doesn't hang forever
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 8000);
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
 
-  try {
-    await fetch(FORM_RESPONSE_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
-      signal: controller.signal
-    });
-
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  } finally {
-    clearTimeout(t);
-  }
+  // We can't detect success/fail from Google Forms,
+  // but if the form is published and accepting responses, it will land in Sheets.
+  return { ok: true };
 }
 
+// --------------------
+// Main
+// --------------------
 async function main() {
   await loadConfig();
 
@@ -198,11 +210,11 @@ async function main() {
       return;
     }
 
-    // Hash with salt so dataset doesn't store raw alias
+    // Hash alias
     const salted = `${CONFIG.HASHING.salt}::${currentAlias}`;
     aliasHash = await sha256Hex(salted);
 
-    // Pre-fill age if cached
+    // Prefill age if cached
     const cachedAge = getCachedAge(aliasHash);
     if (cachedAge) document.getElementById("age").value = cachedAge;
 
@@ -232,7 +244,6 @@ async function main() {
 
   cooldownOverrideBtn.addEventListener("click", () => {
     const pw = prompt("Admin password:");
-    // Pilot-only simple gate
     if (pw === "ADMIN123") {
       overrideMsg.textContent = "Override enabled. You may check-in now.";
       hide("cooldownSection");
@@ -242,7 +253,7 @@ async function main() {
     }
   });
 
-  submitBtn.addEventListener("click", async () => {
+  submitBtn.addEventListener("click", () => {
     submitMsg.textContent = "";
     submitBtn.disabled = true;
 
@@ -275,29 +286,26 @@ async function main() {
         fatigue_scale: Number.isFinite(fatigue_scale) ? fatigue_scale : "",
         motivation_scale: Number.isFinite(motivation_scale) ? motivation_scale : "",
         symptoms: selectedSymptoms(),
-        age: Number.isFinite(age) ? age : ""
-      }
+        age: Number.isFinite(age) ? age : "",
+      },
     };
 
-    // Local failsafe copy
+    // Local backup
     localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
 
-    // Submit to Google Form
-    const resp = await submitToGoogleForm(payload);
+    // Submit (no fetch)
+    submitToGoogleForm(payload);
 
-    if (resp.ok) {
-      submitMsg.textContent = "Saved. (Next: we'll launch the tests.)";
-      // Set 2-hour cooldown
-      const until = nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000;
-      setCooldownUntilMs(aliasHash, until);
+    // We treat as saved (Google Form is published + accepting responses)
+    submitMsg.textContent = "Saved. (Check your Google Sheet to confirm.)";
 
-      // NEXT STEP: route to SDMT screen (we’ll implement next)
-    } else {
-      submitMsg.textContent =
-        "Upload failed (data saved locally). Error: " + (resp.error || "unknown");
-    }
+    // 2-hour cooldown
+    const until = nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000;
+    setCooldownUntilMs(aliasHash, until);
 
     submitBtn.disabled = false;
+
+    // NEXT: launch SDMT screen (we’ll do next step)
   });
 }
 
