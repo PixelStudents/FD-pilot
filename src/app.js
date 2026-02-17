@@ -1,4 +1,4 @@
-const ENDPOINT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbzHVTYY7JRASImK0k8YoMJxBAYuKVd9SnmTCPOWWXMjOUJUWeBW4uvy_mT6AKn-ptsuMQ/exec";
 
 let CONFIG = null;
 
