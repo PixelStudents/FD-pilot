@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fatigue Check</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Fatigue Check</h1>
+
+    <section id="aliasSection">
+      <h2>Enter your code</h2>
+      <input id="aliasInput" placeholder="e.g. a1B9" maxlength="4" autocapitalize="characters" />
+      <button id="aliasBtn">Continue</button>
+      <p class="hint">Code is 4 characters: 2 letters + 2 numbers (any order).</p>
+      <p id="aliasError" class="error"></p>
+    </section>
+
+    <section id="cooldownSection" class="hidden">
+      <h2>Next check-in not available yet</h2>
+      <p id="cooldownText"></p>
+      <button id="cooldownOverrideBtn">Admin override</button>
+      <p id="overrideMsg" class="hint"></p>
+    </section>
+
+    <section id="checkinSection" class="hidden">
+      <h2>Check-in</h2>
+
+      <div class="grid">
+        <label>Sleep (hours)
+          <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
+        </label>
+
+        <label>Shift length (hours)
+          <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
+        </label>
+
+        <label>Hours into shift
+          <input id="hoursInto" type="number" min="0" max="24" step="0.5" />
+        </label>
+
+        <label>Caffeine
+          <select id="caffeine">
+            <option value="none">None</option>
+            <option value="low">Low</option>
+            <option value="med">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+
+        <label>Fatigue (0–10)
+          <input id="fatigue" type="number" min="0" max="10" step="1" />
+        </label>
+
+        <label>Motivation (0–10)
+          <input id="motivation" type="number" min="0" max="10" step="1" />
+        </label>
+
+        <label>Age (optional; asked once)
+          <input id="age" type="number" min="16" max="100" step="1" />
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Symptoms (optional)</legend>
+        <label><input type="checkbox" value="headache" class="symptom"> Headache</label>
+        <label><input type="checkbox" value="fatigue" class="symptom"> Fatigue</label>
+        <label><input type="checkbox" value="dizzy" class="symptom"> Dizziness</label>
+        <label><input type="checkbox" value="stress" class="symptom"> Stress</label>
+        <label><input type="checkbox" value="low_mood" class="symptom"> Low mood</label>
+      </fieldset>
+
+      <button id="submitCheckinBtn">Submit & start tests</button>
+      <p id="submitMsg" class="hint"></p>
+    </section>
+  </main>
+
+  <script src="src/app.js"></script>
+</body>
+</html>
