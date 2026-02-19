@@ -111,7 +111,8 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return \\`${hh}:${mm}:${ss}\`;
+  return \
+`\${hh}:\${mm}:\${ss}`;
 }
 
 function deviceInfo() {
@@ -138,9 +139,10 @@ function median(arr) {
 // --------------------
 function getTodayKeyUTC() {
   const d = new Date();
-  return \\`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+  return \
+`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
     d.getUTCDate()
-  ).padStart(2, "0")}\`;  
+  ).padStart(2, "0")}`;  
 }
 
 function getSessionCountToday(aliasHash) {
@@ -255,7 +257,7 @@ let flowIndex = 0;
 // SDMT Game
 // ===============================
 function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
-  const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];
+  const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];  
 
   const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   for (let i = digits.length - 1; i > 0; i--) {
@@ -925,7 +927,7 @@ function showExplanation(i) {
   show("explainSection");
 
   const step = FLOW[i];
-  document.getElementById("explainTitle").textContent = \\`${step.title} – Instructions\`;
+  document.getElementById("explainTitle").textContent = `${step.title} – Instructions`;
   document.getElementById("explainText").textContent = step.text;
 }
 
@@ -1070,7 +1072,7 @@ async function main() {
       return;
     }
 
-    const salted = \\`${CONFIG.HASHING.salt}::${alias}\`;
+    const salted = `${CONFIG.HASHING.salt}::${alias}`;
     const aliasHash = await sha256Hex(salted);
 
     SESSION.alias = alias;
@@ -1176,7 +1178,7 @@ async function main() {
 
     setCooldownUntilMs(SESSION.aliasHash, nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000);
 
-    GAME_RESULTS = { sdmt: null, nback: null, stroop: null, pvt: null };
+    GAME_RESULTS = { sdmt: null, nback: null, stroop: null, pvt: null };  
 
     submitMsg.textContent = "Saved. Continuing to tests…";
     submitBtn.disabled = false;
