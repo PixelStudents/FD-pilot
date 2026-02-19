@@ -1,5 +1,5 @@
 // ===============================
-// FORM 1: CHECK-IN (already working)
+// FORM 1: CHECK-IN (your existing working form)
 // ===============================
 const FORM_CHECKIN_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfSO6_C_mIWA1G1OHuCwPIaOn_srffgsm6XmM8Y2SKKwhGyBA/formResponse";
@@ -23,7 +23,8 @@ const CHECKIN_ENTRY = {
 };
 
 // ===============================
-// FORM 2: GAME RESULTS (Step 2 mapping done)
+// FORM 2: GAME RESULTS (your new form mapping)
+// Included now; we’ll submit once all games exist.
 // ===============================
 const FORM_RESULTS_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSeL7efoV0n5cBJeJlM_sMfOufITpQcFirPkzAwC7-7uSmmoyA/formResponse";
@@ -68,8 +69,14 @@ async function loadConfig() {
   CONFIG = await res.json();
 }
 
-function show(id) { document.getElementById(id).classList.remove("hidden"); }
-function hide(id) { document.getElementById(id).classList.add("hidden"); }
+function show(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("hidden");
+}
+function hide(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add("hidden");
+}
 
 function normalizeAlias(raw) {
   return (raw || "").trim().toUpperCase();
@@ -96,7 +103,50 @@ async function sha256Hex(str) {
     .join("");
 }
 
-function nowMs() { return Date.now(); }
+function nowMs() {
+  return Date.now();
+}
+
+function formatCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function deviceInfo() {
+  return navigator.userAgent;
+}
+
+function uuidv4() {
+  return crypto.randomUUID();
+}
+
+function selectedSymptoms() {
+  return Array.from(document.querySelectorAll(".symptom:checked")).map((x) => x.value);
+}
+
+// --------------------
+// Local storage helpers
+// --------------------
+function getTodayKeyUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate()
+  ).padStart(2, "0")}`;
+}
+
+function getSessionCountToday(aliasHash) {
+  return Number(localStorage.getItem(`sessions_${aliasHash}_${getTodayKeyUTC()}`) || "0");
+}
+
+function incrementSessionCountToday(aliasHash) {
+  const key = `sessions_${aliasHash}_${getTodayKeyUTC()}`;
+  const n = getSessionCountToday(aliasHash) + 1;
+  localStorage.setItem(key, String(n));
+  return n;
+}
 
 function getCooldownUntilMs(aliasHash) {
   const v = localStorage.getItem(`cooldown_until_${aliasHash}`);
@@ -105,22 +155,6 @@ function getCooldownUntilMs(aliasHash) {
 
 function setCooldownUntilMs(aliasHash, untilMs) {
   localStorage.setItem(`cooldown_until_${aliasHash}`, String(untilMs));
-}
-
-function getTodayKey() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
-}
-
-function getSessionCountToday(aliasHash) {
-  return Number(localStorage.getItem(`sessions_${aliasHash}_${getTodayKey()}`) || "0");
-}
-
-function incrementSessionCountToday(aliasHash) {
-  const key = `sessions_${aliasHash}_${getTodayKey()}`;
-  const n = getSessionCountToday(aliasHash) + 1;
-  localStorage.setItem(key, String(n));
-  return n;
 }
 
 function cacheAgeIfProvided(aliasHash, ageVal) {
@@ -133,23 +167,9 @@ function getCachedAge(aliasHash) {
   return v ? Number(v) : null;
 }
 
-function selectedSymptoms() {
-  return Array.from(document.querySelectorAll(".symptom:checked")).map((x) => x.value);
-}
-
-function deviceInfo() { return navigator.userAgent; }
-function uuidv4() { return crypto.randomUUID(); }
-
-function formatCountdown(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-}
-
 // --------------------
-// Hidden form submit (no fetch)
+// Google Form submit via hidden iframe form
+// (avoids CORS / fetch failures)
 // --------------------
 function submitHiddenForm(url, fields) {
   let iframe = document.getElementById("gf_hidden_iframe");
@@ -180,9 +200,9 @@ function submitHiddenForm(url, fields) {
   form.remove();
 }
 
-// --------------------
-// Session state (used for Step 3 flow)
-// --------------------
+// ===============================
+// Session state
+// ===============================
 let SESSION = {
   alias: "",
   aliasHash: "",
@@ -191,9 +211,17 @@ let SESSION = {
   isFirstToday: false
 };
 
-// --------------------
-// Step 3: Screen flow (Start → SDMT explanation → placeholder game)
-// --------------------
+// Results for this run (we’ll submit later once all games implemented)
+let GAME_RESULTS = {
+  sdmt: null,
+  nback: null,
+  stroop: null,
+  pvt: null
+};
+
+// ===============================
+// Flow
+// ===============================
 const FLOW = [
   {
     key: "sdmt",
@@ -219,12 +247,184 @@ const FLOW = [
 
 let flowIndex = 0;
 
-// --------------------
-// Main
-// --------------------
+// ===============================
+// SDMT Game (60s)
+// ===============================
+function runSDMT({ durationSec = 60, onDone }) {
+  // Fixed symbols each time
+  const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];
+
+  // Randomise digit mapping each run (prevents learning)
+  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  for (let i = digits.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [digits[i], digits[j]] = [digits[j], digits[i]];
+  }
+
+  const mapSymbolToDigit = new Map();
+  SYMBOLS.forEach((sym, idx) => mapSymbolToDigit.set(sym, digits[idx]));
+
+  // Metrics
+  let correct = 0;
+  let incorrect = 0;
+  let trials = 0;
+
+  let currentSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+
+  hide("explainSection");
+  show("gameSection");
+
+  const gameTitle = document.getElementById("gameTitle");
+  const gameUI = document.getElementById("gameUI");
+  const timerEl = document.getElementById("gameTimer");
+
+  gameTitle.textContent = "Symbol Digit Modality Test (SDMT)";
+
+  const mappingSymbolsRow = SYMBOLS.map((s) => `<span style="margin:0 8px;">${s}</span>`).join("");
+  const mappingDigitsRow = SYMBOLS.map((s) => `<span style="margin:0 10px;">${mapSymbolToDigit.get(s)}</span>`).join("");
+
+  gameUI.innerHTML = `
+    <div style="text-align:center;">
+      <div style="font-size:28px; line-height:1.2; margin-top:6px;">
+        ${mappingSymbolsRow}
+      </div>
+      <div style="font-size:22px; margin-top:8px; opacity:0.95;">
+        ${mappingDigitsRow}
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:center; align-items:center; height:190px; margin-top:16px;">
+      <div id="sdmtTarget" style="font-size:92px; font-weight:700;">${currentSymbol}</div>
+    </div>
+
+    <div id="sdmtFeedback" class="hint" style="text-align:center; min-height:22px;"></div>
+
+    <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      ${[1,2,3,4,5,6,7,8,9]
+        .map(
+          (n) =>
+            `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px;">${n}</button>`
+        )
+        .join("")}
+    </div>
+
+    <div class="hint" style="text-align:center; margin-top:14px;">
+      Correct: <b id="sdmtCorrect">${correct}</b> &nbsp; | &nbsp; Incorrect: <b id="sdmtIncorrect">${incorrect}</b>
+    </div>
+  `;
+
+  const targetEl = document.getElementById("sdmtTarget");
+  const feedbackEl = document.getElementById("sdmtFeedback");
+  const correctEl = document.getElementById("sdmtCorrect");
+  const incorrectEl = document.getElementById("sdmtIncorrect");
+
+  const startMs = Date.now();
+  let ended = false;
+
+  function updateTimer() {
+    const elapsed = (Date.now() - startMs) / 1000;
+    const remaining = Math.max(0, Math.ceil(durationSec - elapsed));
+    timerEl.textContent = String(remaining);
+    if (remaining <= 0 && !ended) finish();
+  }
+  const timerInt = setInterval(updateTimer, 200);
+  updateTimer();
+
+  function nextTrial() {
+    trials++;
+    currentSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+    targetEl.textContent = currentSymbol;
+  }
+
+  function handleAnswer(n) {
+    if (ended) return;
+
+    const correctDigit = mapSymbolToDigit.get(currentSymbol);
+    if (n === correctDigit) {
+      correct++;
+      feedbackEl.textContent = "✓ Correct";
+    } else {
+      incorrect++;
+      feedbackEl.textContent = `✗ Incorrect (was ${correctDigit})`;
+    }
+    correctEl.textContent = String(correct);
+    incorrectEl.textContent = String(incorrect);
+
+    nextTrial();
+  }
+
+  // Buttons
+  Array.from(gameUI.querySelectorAll(".sdmtBtn")).forEach((btn) => {
+    btn.addEventListener("click", () => handleAnswer(Number(btn.dataset.n)));
+  });
+
+  // Optional keyboard 1–9
+  function keyHandler(e) {
+    if (/^[1-9]$/.test(e.key)) handleAnswer(Number(e.key));
+  }
+  window.addEventListener("keydown", keyHandler);
+
+  function finish() {
+    ended = true;
+    clearInterval(timerInt);
+    window.removeEventListener("keydown", keyHandler);
+
+    // Score (simple + robust for 60s)
+    // Reward correct, small penalty for incorrect, scaled to 0–100.
+    const raw = Math.max(0, correct - 0.25 * incorrect);
+    const score = Math.max(0, Math.min(100, Math.round((raw / 60) * 100)));
+
+    onDone?.({
+      correct,
+      incorrect,
+      trials,
+      score_0_100: score
+    });
+  }
+}
+
+// ===============================
+// UI helpers
+// ===============================
+function showExplanation(i) {
+  hide("startSection");
+  hide("gameSection");
+  hide("resultsSection");
+  show("explainSection");
+
+  const step = FLOW[i];
+  document.getElementById("explainTitle").textContent = `${step.title} – Instructions`;
+  document.getElementById("explainText").textContent = step.text;
+}
+
+function showResultsScreen() {
+  hide("gameSection");
+  hide("explainSection");
+  hide("startSection");
+  show("resultsSection");
+
+  const sdmt = GAME_RESULTS.sdmt;
+
+  document.getElementById("resultsSummary").innerHTML = `
+    <p><b>Session complete (SDMT implemented, others pending).</b></p>
+    <p><b>SDMT</b></p>
+    <ul>
+      <li>Correct: <b>${sdmt ? sdmt.correct : "-"}</b></li>
+      <li>Incorrect: <b>${sdmt ? sdmt.incorrect : "-"}</b></li>
+      <li>Score (0–100): <b>${sdmt ? sdmt.score_0_100 : "-"}</b></li>
+    </ul>
+    <p class="hint">Next step: implement 2-back, Stroop and PVT, then submit full results to the Game Results form.</p>
+    <p class="hint">Session ID: ${SESSION.sessionId}</p>
+  `;
+}
+
+// ===============================
+// MAIN
+// ===============================
 async function main() {
   await loadConfig();
 
+  // Elements
   const aliasInput = document.getElementById("aliasInput");
   const aliasBtn = document.getElementById("aliasBtn");
   const aliasError = document.getElementById("aliasError");
@@ -237,25 +437,18 @@ async function main() {
   const submitMsg = document.getElementById("submitMsg");
 
   const startBtn = document.getElementById("startSessionBtn");
-
-  const explainTitle = document.getElementById("explainTitle");
-  const explainText = document.getElementById("explainText");
   const beginTestBtn = document.getElementById("beginTestBtn");
 
-  const gameTitle = document.getElementById("gameTitle");
-  const gameUI = document.getElementById("gameUI");
-
   const finishBtn = document.getElementById("finishBtn");
-  const resultsSummary = document.getElementById("resultsSummary");
 
-  // Alias continue
+  // Alias -> check cooldown -> checkin
   aliasBtn.addEventListener("click", async () => {
     aliasError.textContent = "";
+
     const alias = normalizeAlias(aliasInput.value);
 
     if (!isValidAliasFormat(alias)) {
-      aliasError.textContent =
-        "Invalid format. Must be 4 chars: 2 letters + 2 numbers (any order).";
+      aliasError.textContent = "Invalid format. Must be 4 chars: 2 letters + 2 numbers (any order).";
       return;
     }
     if (!isAllowedAlias(alias)) {
@@ -269,11 +462,11 @@ async function main() {
     SESSION.alias = alias;
     SESSION.aliasHash = aliasHash;
 
-    // Prefill cached age
+    // Prefill age if previously stored
     const cachedAge = getCachedAge(aliasHash);
     if (cachedAge) document.getElementById("age").value = cachedAge;
 
-    // Cooldown
+    // Cooldown check
     const until = getCooldownUntilMs(aliasHash);
     if (nowMs() < until) {
       hide("aliasSection");
@@ -288,6 +481,7 @@ async function main() {
           show("checkinSection");
         }
       };
+
       tick();
       const int = setInterval(tick, 500);
       return;
@@ -309,7 +503,7 @@ async function main() {
     }
   });
 
-  // Submit check-in → Start screen
+  // Submit check-in -> Start screen
   submitBtn.addEventListener("click", () => {
     submitMsg.textContent = "";
     submitBtn.disabled = true;
@@ -317,14 +511,13 @@ async function main() {
     const sleep_hours = Number(document.getElementById("sleepHours").value || "");
     const shift_length_hours = Number(document.getElementById("shiftLen").value || "");
     const hours_into_shift = Number(document.getElementById("hoursInto").value || "");
-    const caffeine_level = document.getElementById("caffeine").value;
+    const caffeine_level = document.getElementById("caffeine").value || "";
     const fatigue_scale = Number(document.getElementById("fatigue").value || "");
     const motivation_scale = Number(document.getElementById("motivation").value || "");
     const age = Number(document.getElementById("age").value || "");
 
     if (age) cacheAgeIfProvided(SESSION.aliasHash, age);
 
-    // Session IDs for linking check-in <-> results
     SESSION.sessionId = uuidv4();
     SESSION.sessionNumberToday = incrementSessionCountToday(SESSION.aliasHash);
     SESSION.isFirstToday = SESSION.sessionNumberToday === 1;
@@ -349,10 +542,10 @@ async function main() {
       }
     };
 
-    // local backup
+    // Local backup
     localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
 
-    // Submit to CHECK-IN form (hidden form post)
+    // Submit to check-in form
     submitHiddenForm(FORM_CHECKIN_URL, {
       [CHECKIN_ENTRY.timestamp_utc]: payload.timestamp_utc,
       [CHECKIN_ENTRY.session_id]: payload.session_id,
@@ -372,12 +565,13 @@ async function main() {
       [CHECKIN_ENTRY.age]: String(payload.checkin.age)
     });
 
-    // Set cooldown now (2 hours)
-    setCooldownUntilMs(
-      SESSION.aliasHash,
-      nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000
-    );
+    // Apply cooldown immediately
+    setCooldownUntilMs(SESSION.aliasHash, nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000);
 
+    // Reset game results
+    GAME_RESULTS = { sdmt: null, nback: null, stroop: null, pvt: null };
+
+    // Move to start
     submitMsg.textContent = "Saved. Continuing to tests…";
     submitBtn.disabled = false;
 
@@ -385,21 +579,41 @@ async function main() {
     show("startSection");
   });
 
-  // Start → first explanation
+  // Start -> show SDMT explanation
   startBtn.addEventListener("click", () => {
     flowIndex = 0;
     showExplanation(flowIndex);
   });
 
-  // Begin test → placeholder game screen
+  // Begin test -> run SDMT (others placeholder for now)
   beginTestBtn.addEventListener("click", () => {
     const step = FLOW[flowIndex];
+
+    if (step.key === "sdmt") {
+      runSDMT({
+        durationSec: 60,
+        onDone: (result) => {
+          GAME_RESULTS.sdmt = result;
+
+          // Next steps are placeholders for now.
+          flowIndex++;
+          if (flowIndex < FLOW.length) {
+            showExplanation(flowIndex);
+          } else {
+            showResultsScreen();
+          }
+        }
+      });
+      return;
+    }
+
+    // Placeholder for other games (for now)
     hide("explainSection");
     show("gameSection");
-    gameTitle.textContent = step.title;
-    gameUI.innerHTML = `
-      <p class="hint"><b>${step.title} game not implemented yet.</b></p>
-      <p class="hint">Next step: we build the full 60s ${step.title} task + scoring.</p>
+    document.getElementById("gameTitle").textContent = step.title;
+    document.getElementById("gameUI").innerHTML = `
+      <p class="hint"><b>${step.title} not implemented yet.</b></p>
+      <p class="hint">Next we’ll build this game exactly like SDMT (60s + scoring + saved to sheet).</p>
       <button id="nextStepBtn">Continue</button>
     `;
 
@@ -408,35 +622,17 @@ async function main() {
       if (flowIndex < FLOW.length) {
         showExplanation(flowIndex);
       } else {
-        // End of battery placeholder
-        hide("gameSection");
-        show("resultsSection");
-        resultsSummary.innerHTML = `
-          <p><b>Battery complete (placeholder).</b></p>
-          <p>Next: implement SDMT → 2-back → Stroop → PVT + scoring + submit results.</p>
-          <p class="hint">Session ID: ${SESSION.sessionId}</p>
-        `;
+        showResultsScreen();
       }
     });
   });
 
+  // Finish -> back to alias screen
   finishBtn.addEventListener("click", () => {
-    // Reset to start
     hide("resultsSection");
     show("aliasSection");
     document.getElementById("aliasInput").value = "";
   });
-
-  function showExplanation(i) {
-    hide("startSection");
-    hide("gameSection");
-    hide("resultsSection");
-    show("explainSection");
-
-    const step = FLOW[i];
-    explainTitle.textContent = `${step.title} – Instructions`;
-    explainText.textContent = step.text;
-  }
 }
 
 main();
