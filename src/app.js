@@ -99,8 +99,7 @@ async function sha256Hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", enc);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))
-    .join(""
-  );
+    .join("");
 }
 
 function nowMs() {
@@ -112,7 +111,7 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  return \\`${hh}:${mm}:${ss}\`;
 }
 
 function deviceInfo() {
@@ -127,14 +126,21 @@ function selectedSymptoms() {
   return Array.from(document.querySelectorAll(".symptom:checked")).map((x) => x.value);
 }
 
+function median(arr) {
+  if (!arr || arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 // --------------------
 // Local storage helpers
 // --------------------
 function getTodayKeyUTC() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+  return \\`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
     d.getUTCDate()
-  ).padStart(2, "0")}`;
+  ).padStart(2, "0")}\`;  
 }
 
 function getSessionCountToday(aliasHash) {
@@ -224,7 +230,7 @@ const FLOW = [
   {
     key: "sdmt",
     title: "SDMT",
-    text: "A key at the top shows 9 symbols, each paired with a number. A symbol appears in the centre — press the matching number as fast as you can. You have 4 seconds per symbol before it counts as a miss."
+    text: "A key at the top shows 9 symbols, each paired with a number. A symbol appears in the centre — press the matching number as fast as you can. You have 4 seconds per symbol before it counts as incorrect."
   },
   {
     key: "nback",
@@ -234,26 +240,23 @@ const FLOW = [
   {
     key: "stroop",
     title: "Stroop",
-    text: "Select the colour of the text (ignore what the word says)."
+    text: "A colour word will appear on screen printed in a different ink colour. Tap the button matching the INK COLOUR — ignore what the word says. Respond as quickly and accurately as you can. You have 60 seconds."
   },
   {
     key: "pvt",
     title: "PVT",
-    text: "Press as soon as the stimulus appears. Avoid false starts."
+    text: "A red dot will appear on screen after a random delay (2–10 seconds). Tap it as fast as you can. Do NOT tap before it appears — that counts as a false start. You have 60 seconds."
   }
 ];
 
 let flowIndex = 0;
 
 // ===============================
-// FIX 1 + 2: SDMT Game
-// — Table-aligned key so symbols & numbers line up
-// — 4-second per-trial timeout counts as incorrect if no answer
+// SDMT Game
 // ===============================
 function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
   const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];
 
-  // Shuffle digits so mapping changes each run
   const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   for (let i = digits.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -278,7 +281,6 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
 
   gameTitle.textContent = "Symbol Digit Modality Test (SDMT)";
 
-  // FIX 1: Use a proper table for aligned key display
   const keyTableCells = SYMBOLS.map(
     (s) => `<td style="text-align:center; padding:4px 10px; font-size:26px; line-height:1;">${s}</td>`
   ).join("");
@@ -295,23 +297,18 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
         </tbody>
       </table>
     </div>
-
     <div style="display:flex; justify-content:center; align-items:center; height:160px; margin-top:16px;">
       <div id="sdmtTarget" style="font-size:92px; font-weight:700;">${currentSymbol}</div>
     </div>
-
     <div style="text-align:center; margin-top:4px;">
       <span id="sdmtTrialTimer" style="font-size:18px; color:#e44; font-weight:700;"></span>
     </div>
-
     <div id="sdmtFeedback" style="text-align:center; min-height:22px; font-size:15px; margin-top:6px;"></div>
-
     <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
       ${[1,2,3,4,5,6,7,8,9]
         .map((n) => `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px; font-size:18px;">${n}</button>`)
         .join("")}
     </div>
-
     <div class="hint" style="text-align:center; margin-top:14px;">
       Correct: <b id="sdmtCorrect">0</b> &nbsp;|&nbsp; Incorrect: <b id="sdmtIncorrect">0</b>
     </div>
@@ -328,7 +325,6 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
   let trialStartMs = Date.now();
   let trialTimeoutHandle = null;
 
-  // Overall game countdown
   function updateTimer() {
     const elapsed = (Date.now() - startMs) / 1000;
     const remaining = Math.max(0, Math.ceil(durationSec - elapsed));
@@ -338,7 +334,6 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
   const timerInt = setInterval(updateTimer, 200);
   updateTimer();
 
-  // FIX 2: Per-trial countdown display
   function updateTrialTimer() {
     if (ended) return;
     const elapsed = (Date.now() - trialStartMs) / 1000;
@@ -352,7 +347,6 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     trialStartMs = Date.now();
     trialTimeoutHandle = setTimeout(() => {
       if (ended) return;
-      // Time's up for this trial — count as miss
       incorrect++;
       feedbackEl.textContent = `⏱ Too slow! (was ${mapSymbolToDigit.get(currentSymbol)})`;
       feedbackEl.style.color = "#c00";
@@ -366,13 +360,11 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     currentSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
     targetEl.textContent = currentSymbol;
     startTrialTimeout();
-    // Clear feedback colour after short delay
     setTimeout(() => {
       if (!ended) feedbackEl.style.color = "";
     }, 600);
   }
 
-  // Start first trial timeout
   startTrialTimeout();
 
   function handleAnswer(n) {
@@ -420,7 +412,7 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
 }
 
 // ===============================
-// FIX 4: 2-Back Game
+// 2-Back Game
 // ===============================
 function runNBack({ rounds = 25, nBack = 2, onDone }) {
   const LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("");
@@ -466,7 +458,6 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   const yesBtn     = document.getElementById("nbackYes");
   const noBtn      = document.getElementById("nbackNo");
 
-  // Pre-generate sequence; ~30% of trials after position nBack are targets
   const sequence = [];
   for (let i = 0; i < rounds; i++) {
     if (i >= nBack && Math.random() < 0.30) {
@@ -592,6 +583,339 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
 }
 
 // ===============================
+// Stroop Game
+// ===============================
+function runStroop({ durationSec = 60, onDone }) {
+  const COLOURS = [
+    { name: "RED",    hex: "#e53935" },
+    { name: "BLUE",   hex: "#1e88e5" },
+    { name: "GREEN",  hex: "#43a047" },
+    { name: "YELLOW", hex: "#f9a825" }
+  ];
+
+  hide("explainSection");
+  show("gameSection");
+
+  const gameTitle = document.getElementById("gameTitle");
+  const gameUI    = document.getElementById("gameUI");
+  const timerEl   = document.getElementById("gameTimer");
+
+  gameTitle.textContent = "Stroop Colour Task";
+
+  // Build button grid
+  const btnHTML = COLOURS.map(
+    (c) => `<button class="stroopBtn" data-colour="${c.name}"
+      style="width:120px; height:54px; font-size:18px; font-weight:700;
+             background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
+      ${c.name}
+    </button>"
+  ).join("");
+
+  gameUI.innerHTML = `
+    <p class="hint" style="text-align:center;">Tap the button matching the <b>ink colour</b> — ignore the word.</p>
+    <div style="display:flex; justify-content:center; align-items:center; height:130px; margin-top:8px;">
+      <div id="stroopWord" style="font-size:72px; font-weight:900; letter-spacing:2px;"></div>
+    </div>
+    <div id="stroopFeedback" style="text-align:center; min-height:24px; font-size:15px; margin-top:4px;"></div>
+    <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:18px;">
+      ${btnHTML}
+    </div>
+    <div class="hint" style="text-align:center; margin-top:16px;">
+      Correct: <b id="stroopCorrect">0</b> &nbsp;|&nbsp; Incorrect: <b id="stroopIncorrect">0</b>
+    </div>
+  `;
+
+  const wordEl      = document.getElementById("stroopWord");
+  const feedbackEl  = document.getElementById("stroopFeedback");
+  const correctEl   = document.getElementById("stroopCorrect");
+  const incorrectEl = document.getElementById("stroopIncorrect");
+
+  let correct = 0;
+  let incorrect = 0;
+  const reactionTimes = [];
+  let trialStart = 0;
+  let currentInkColour = "";
+  let ended = false;
+
+  function nextTrial() {
+    // Pick word and ink colour independently (force incongruent ~60% of time)
+    const wordIdx = Math.floor(Math.random() * COLOURS.length);
+    let inkIdx;
+    if (Math.random() < 0.6) {
+      // incongruent
+      do { inkIdx = Math.floor(Math.random() * COLOURS.length); } while (inkIdx === wordIdx);
+    } else {
+      inkIdx = wordIdx;
+    }
+    const word      = COLOURS[wordIdx].name;
+    const inkColour = COLOURS[inkIdx];
+    currentInkColour = inkColour.name;
+    wordEl.textContent = word;
+    wordEl.style.color = inkColour.hex;
+    trialStart = Date.now();
+  }
+
+  nextTrial();
+
+  const startMs = Date.now();
+
+  function updateTimer() {
+    const elapsed = (Date.now() - startMs) / 1000;
+    const remaining = Math.max(0, Math.ceil(durationSec - elapsed));
+    timerEl.textContent = String(remaining) + "s";
+    if (remaining <= 0 && !ended) finish();
+  }
+  const timerInt = setInterval(updateTimer, 200);
+  updateTimer();
+
+  function handleClick(chosen) {
+    if (ended) return;
+    const rt = Date.now() - trialStart;
+
+    if (chosen === currentInkColour) {
+      correct++;
+      reactionTimes.push(rt);
+      feedbackEl.textContent = "✓ Correct";
+      feedbackEl.style.color = "#080";
+      correctEl.textContent = String(correct);
+    } else {
+      incorrect++;
+      feedbackEl.textContent = `✗ Wrong — it was ${currentInkColour}`;
+      feedbackEl.style.color = "#c00";
+      incorrectEl.textContent = String(incorrect);
+    }
+    nextTrial();
+    setTimeout(() => { if (!ended) feedbackEl.style.color = ""; }, 500);
+  }
+
+  Array.from(gameUI.querySelectorAll(".stroopBtn")).forEach((btn) => {
+    btn.addEventListener("click", () => handleClick(btn.dataset.colour));
+  });
+
+  function finish() {
+    ended = true;
+    clearInterval(timerInt);
+
+    const total = correct + incorrect;
+    const accuracy = total > 0 ? correct / total : 0;
+    const medianRt = median(reactionTimes);
+
+    // Score: blend accuracy (70%) and speed (30%)
+    // Speed benchmark: 400ms = perfect, 1200ms = 0
+    const speedScore = Math.max(0, Math.min(1, (1200 - medianRt) / 800));
+    const rawScore = accuracy * 0.7 + speedScore * 0.3;
+    const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+
+    onDone?.({ correct, incorrect, median_rt_ms: medianRt, score_0_100: score });
+  }
+}
+
+// ===============================
+// PVT Game
+// ===============================
+function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone }) {
+  const LAPSE_THRESHOLD_MS = 500;
+
+  hide("explainSection");
+  show("gameSection");
+
+  const gameTitle = document.getElementById("gameTitle");
+  const gameUI    = document.getElementById("gameUI");
+  const timerEl   = document.getElementById("gameTimer");
+
+  gameTitle.textContent = "Psychomotor Vigilance Task (PVT)";
+
+  gameUI.innerHTML = `
+    <p class="hint" style="text-align:center;">Tap the dot as soon as it appears. Do NOT tap early.</p>
+    <div id="pvtArena" style="
+      display:flex; justify-content:center; align-items:center;
+      height:200px; margin-top:16px; cursor:pointer; user-select:none;">
+      <div id="pvtDot" style="
+        width:100px; height:100px; border-radius:50%;
+        background:#ccc; opacity:0.25;
+        display:flex; align-items:center; justify-content:center;
+        font-size:18px; font-weight:700; color:#fff;
+        transition:background 0.1s;">
+      </div>
+    </div>
+    <div id="pvtFeedback" style="text-align:center; min-height:28px; font-size:16px; margin-top:8px;"></div>
+    <div class="hint" style="text-align:center; margin-top:12px;">
+      Responses: <b id="pvtResponses">0</b> &nbsp;|&nbsp;
+      Lapses (&gt;500ms): <b id="pvtLapses">0</b> &nbsp;|&nbsp;
+      False starts: <b id="pvtFalseStarts">0</b>
+    </div>
+    <div class="hint" style="text-align:center; margin-top:4px;">
+      Last RT: <b id="pvtLastRT">—</b>
+    </div>
+  `;
+
+  const arena        = document.getElementById("pvtArena");
+  const dot          = document.getElementById("pvtDot");
+  const feedbackEl   = document.getElementById("pvtFeedback");
+  const responsesEl  = document.getElementById("pvtResponses");
+  const lapsesEl     = document.getElementById("pvtLapses");
+  const falseStartsEl= document.getElementById("pvtFalseStarts");
+  const lastRtEl     = document.getElementById("pvtLastRT");
+
+  const reactionTimes = [];
+  let lapses       = 0;
+  let falseStarts  = 0;
+  let stimulusOn   = false;
+  let stimulusStart = 0;
+  let waitHandle   = null;
+  let ended        = false;
+
+  const startMs = Date.now();
+
+  function updateTimer() {
+    const elapsed = (Date.now() - startMs) / 1000;
+    const remaining = Math.max(0, Math.ceil(durationSec - elapsed));
+    timerEl.textContent = String(remaining) + "s";
+    if (remaining <= 0 && !ended) finish();
+  }
+  const timerInt = setInterval(updateTimer, 200);
+  updateTimer();
+
+  function showStimulus() {
+    if (ended) return;
+    stimulusOn = true;
+    stimulusStart = Date.now();
+    dot.style.background = "#e53935";
+    dot.style.opacity = "1";
+    dot.textContent = "";
+
+    // Auto-lapse if no response within maxDelaySec ms
+    waitHandle = setTimeout(() => {
+      if (!stimulusOn || ended) return;
+      // Count as lapse
+      lapses++;
+      lapsesEl.textContent = String(lapses);
+      feedbackEl.textContent = "⏱ Too slow! (lapse)";
+      feedbackEl.style.color = "#c00";
+      reactionTimes.push(LAPSE_THRESHOLD_MS + 1); // penalise
+      hideStimulus();
+      scheduleNext();
+    }, maxDelaySec * 1000);
+  }
+
+  function hideStimulus() {
+    stimulusOn = false;
+    dot.style.background = "#ccc";
+    dot.style.opacity = "0.25";
+    dot.textContent = "";
+    clearTimeout(waitHandle);
+  }
+
+  function scheduleNext() {
+    if (ended) return;
+    const delay = (minDelaySec + Math.random() * (maxDelaySec - minDelaySec)) * 1000;
+    waitHandle = setTimeout(showStimulus, delay);
+  }
+
+  arena.addEventListener("click", () => {
+    if (ended) return;
+
+    if (!stimulusOn) {
+      // False start
+      falseStarts++;
+      falseStartsEl.textContent = String(falseStarts);
+      feedbackEl.textContent = "✗ Too early! (false start)";
+      feedbackEl.style.color = "#e65100";
+      return;
+    }
+
+    // Valid response
+    clearTimeout(waitHandle);
+    const rt = Date.now() - stimulusStart;
+    reactionTimes.push(rt);
+    const responses = reactionTimes.length;
+    responsesEl.textContent = String(responses);
+    lastRtEl.textContent = rt + " ms";
+
+    if (rt >= LAPSE_THRESHOLD_MS) {
+      lapses++;
+      lapsesEl.textContent = String(lapses);
+      feedbackEl.textContent = `⚠ Slow: ${rt} ms (lapse)`;
+      feedbackEl.style.color = "#c00";
+    } else {
+      feedbackEl.textContent = `✓ ${rt} ms`;
+      feedbackEl.style.color = rt < 250 ? "#080" : "#555";
+    }
+
+    hideStimulus();
+    scheduleNext();
+    setTimeout(() => { if (!ended) feedbackEl.style.color = ""; }, 700);
+  });
+
+  // Start first stimulus
+  scheduleNext();
+
+  function finish() {
+    ended = true;
+    clearInterval(timerInt);
+    clearTimeout(waitHandle);
+    hideStimulus();
+
+    const validRTs = reactionTimes.filter((rt) => rt < LAPSE_THRESHOLD_MS);
+    const medianRt = validRTs.length > 0 ? median(validRTs) : LAPSE_THRESHOLD_MS;
+
+    // Score: median RT benchmark 150ms = 100, 500ms = 0; penalise lapses & false starts
+    const speedScore = Math.max(0, Math.min(1, (500 - medianRt) / 350));
+    const totalTrials = reactionTimes.length;
+    const lapseRate   = totalTrials > 0 ? lapses / totalTrials : 0;
+    const fsRate      = totalTrials > 0 ? falseStarts / totalTrials : 0;
+    const penalty     = Math.min(1, lapseRate * 1.5 + fsRate * 0.5);
+    const rawScore    = speedScore * (1 - penalty);
+    const score       = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+
+    onDone?.({ median_rt_ms: medianRt, lapses, false_starts: falseStarts, score_0_100: score });
+  }
+}
+
+// ===============================
+// Scoring helpers
+// ===============================
+function computeOverall(results) {
+  // Weighted average: SDMT 25%, NBack 25%, Stroop 25%, PVT 25%
+  const weights = { sdmt: 0.25, nback: 0.25, stroop: 0.25, pvt: 0.25 };
+  let total = 0;
+  let wSum  = 0;
+  for (const [key, w] of Object.entries(weights)) {
+    const r = results[key];
+    if (r && typeof r.score_0_100 === "number") {
+      total += r.score_0_100 * w;
+      wSum  += w;
+    }
+  }
+  return wSum > 0 ? Math.round(total / wSum) : 0;
+}
+
+function scoreToBand(score) {
+  if (score >= 80) return "Green";
+  if (score >= 60) return "Amber";
+  if (score >= 40) return "Amber-Red";
+  return "Red";
+}
+
+function scoreToAdvice(score, band) {
+  if (band === "Green") {
+    return "Cognitive performance looks good. You appear alert and well-rested. Continue as normal and recheck after your next rest break.";
+  }
+  if (band === "Amber") {
+    return "Mild signs of fatigue detected. Take a short break if possible, stay hydrated, and avoid high-risk tasks requiring sustained focus. Recheck in 2 hours.";
+  }
+  if (band === "Amber-Red") {
+    return "Moderate fatigue indicators present. Consider a rest or handover before safety-critical tasks. Do not drive or operate machinery without supervisor awareness.";
+  }
+  return "Significant fatigue detected. Rest is strongly recommended before resuming duty. Inform your supervisor and avoid safety-critical tasks.";
+}
+
+function bandColour(band) {
+  const map = { "Green": "#2e7d32", "Amber": "#f9a825", "Amber-Red": "#e65100", "Red": "#c62828" };
+  return map[band] || "#555";
+}
+
+// ===============================
 // UI helpers
 // ===============================
 function showExplanation(i) {
@@ -601,7 +925,7 @@ function showExplanation(i) {
   show("explainSection");
 
   const step = FLOW[i];
-  document.getElementById("explainTitle").textContent = `${step.title} – Instructions`;
+  document.getElementById("explainTitle").textContent = \\`${step.title} – Instructions\`;
   document.getElementById("explainText").textContent = step.text;
 }
 
@@ -611,60 +935,102 @@ function showResultsScreen() {
   hide("startSection");
   show("resultsSection");
 
-  const sdmt  = GAME_RESULTS.sdmt;
-  const nback = GAME_RESULTS.nback;
+  const sdmt   = GAME_RESULTS.sdmt;
+  const nback  = GAME_RESULTS.nback;
+  const stroop = GAME_RESULTS.stroop;
+  const pvt    = GAME_RESULTS.pvt;
 
-  // FIX 3: Submit game results to Google Sheet
+  const overallScore = computeOverall(GAME_RESULTS);
+  const band         = scoreToBand(overallScore);
+  const advice       = scoreToAdvice(overallScore, band);
+  const bColour      = bandColour(band);
+
+  // Submit full results to Google Sheet
   submitHiddenForm(FORM_RESULTS_URL, {
     [RESULTS_ENTRY.timestamp_utc]: new Date().toISOString(),
     [RESULTS_ENTRY.session_id]:    SESSION.sessionId,
     [RESULTS_ENTRY.alias_hash]:    SESSION.aliasHash,
     [RESULTS_ENTRY.app_version]:   CONFIG.APP_VERSION,
 
-    [RESULTS_ENTRY.sdmt_correct]:     String(sdmt ? sdmt.correct     : ""),
-    [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt ? sdmt.incorrect   : ""),
-    [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt ? sdmt.score_0_100 : ""),
+    [RESULTS_ENTRY.sdmt_correct]:     String(sdmt   ? sdmt.correct       : ""),
+    [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt   ? sdmt.incorrect     : ""),
+    [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt   ? sdmt.score_0_100   : ""),
 
-    [RESULTS_ENTRY.nback_hits]:         String(nback ? nback.hits         : ""),
-    [RESULTS_ENTRY.nback_misses]:       String(nback ? nback.misses       : ""),
-    [RESULTS_ENTRY.nback_false_alarms]: String(nback ? nback.false_alarms : ""),
-    [RESULTS_ENTRY.nback_score_0_100]:  String(nback ? nback.score_0_100  : ""),
+    [RESULTS_ENTRY.nback_hits]:         String(nback  ? nback.hits          : ""),
+    [RESULTS_ENTRY.nback_misses]:       String(nback  ? nback.misses        : ""),
+    [RESULTS_ENTRY.nback_false_alarms]: String(nback  ? nback.false_alarms  : ""),
+    [RESULTS_ENTRY.nback_score_0_100]:  String(nback  ? nback.score_0_100   : ""),
 
-    [RESULTS_ENTRY.stroop_correct]:      "",
-    [RESULTS_ENTRY.stroop_incorrect]:    "",
-    [RESULTS_ENTRY.stroop_median_rt_ms]: "",
-    [RESULTS_ENTRY.stroop_score_0_100]:  "",
+    [RESULTS_ENTRY.stroop_correct]:      String(stroop ? stroop.correct      : ""),
+    [RESULTS_ENTRY.stroop_incorrect]:    String(stroop ? stroop.incorrect    : ""),
+    [RESULTS_ENTRY.stroop_median_rt_ms]: String(stroop ? stroop.median_rt_ms : ""),
+    [RESULTS_ENTRY.stroop_score_0_100]:  String(stroop ? stroop.score_0_100  : ""),
 
-    [RESULTS_ENTRY.pvt_median_rt_ms]: "",
-    [RESULTS_ENTRY.pvt_lapses]:       "",
-    [RESULTS_ENTRY.pvt_false_starts]: "",
-    [RESULTS_ENTRY.pvt_score_0_100]:  "",
+    [RESULTS_ENTRY.pvt_median_rt_ms]: String(pvt    ? pvt.median_rt_ms    : ""),
+    [RESULTS_ENTRY.pvt_lapses]:       String(pvt    ? pvt.lapses           : ""),
+    [RESULTS_ENTRY.pvt_false_starts]: String(pvt    ? pvt.false_starts     : ""),
+    [RESULTS_ENTRY.pvt_score_0_100]:  String(pvt    ? pvt.score_0_100      : ""),
 
-    [RESULTS_ENTRY.overall_score_0_100]: "",
-    [RESULTS_ENTRY.overall_band]:        "",
-    [RESULTS_ENTRY.advice_text]:         ""
+    [RESULTS_ENTRY.overall_score_0_100]: String(overallScore),
+    [RESULTS_ENTRY.overall_band]:        band,
+    [RESULTS_ENTRY.advice_text]:         advice
   });
 
   document.getElementById("resultsSummary").innerHTML = `
-    <p><b>Session complete!</b></p>
+    <div style="text-align:center; padding:16px 0 8px;">
+      <div style="font-size:64px; font-weight:900; color:${bColour};">${overallScore}</div>
+      <div style="font-size:22px; font-weight:700; color:${bColour}; margin-top:4px;">${band}</div>
+      <p style="max-width:480px; margin:12px auto 0; font-size:15px; line-height:1.55; color:#333;">${advice}</p>
+    </div>
 
-    <p><b>SDMT</b></p>
-    <ul>
-      <li>Correct: <b>${sdmt ? sdmt.correct : "-"}</b></li>
-      <li>Incorrect: <b>${sdmt ? sdmt.incorrect : "-"}</b></li>
-      <li>Score (0–100): <b>${sdmt ? sdmt.score_0_100 : "-"}</b></li>
-    </ul>
+    <hr style="margin:20px 0; border:none; border-top:1px solid #e0e0e0;" />
 
-    <p><b>2-Back</b></p>
-    <ul>
-      <li>Hits: <b>${nback ? nback.hits : "-"}</b></li>
-      <li>Misses: <b>${nback ? nback.misses : "-"}</b></li>
-      <li>False alarms: <b>${nback ? nback.false_alarms : "-"}</b></li>
-      <li>Score (0–100): <b>${nback ? nback.score_0_100 : "-"}</b></li>
-    </ul>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
 
-    <p class="hint">Results submitted to Google Sheets. &nbsp; Session ID: ${SESSION.sessionId}</p>
-    <p class="hint">Stroop &amp; PVT coming next.</p>
+      <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
+        <p style="margin:0 0 8px; font-weight:700;">SDMT</p>
+        <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
+          <li>Correct: <b>${sdmt ? sdmt.correct : "—"}</b></li>
+          <li>Incorrect: <b>${sdmt ? sdmt.incorrect : "—"}</b></li>
+          <li>Score: <b>${sdmt ? sdmt.score_0_100 : "—"} / 100</b></li>
+        </ul>
+      </div>
+
+      <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
+        <p style="margin:0 0 8px; font-weight:700;">2-Back</p>
+        <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
+          <li>Hits: <b>${nback ? nback.hits : "—"}</b></li>
+          <li>Misses: <b>${nback ? nback.misses : "—"}</b></li>
+          <li>False alarms: <b>${nback ? nback.false_alarms : "—"}</b></li>
+          <li>Score: <b>${nback ? nback.score_0_100 : "—"} / 100</b></li>
+        </ul>
+      </div>
+
+      <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
+        <p style="margin:0 0 8px; font-weight:700;">Stroop</p>
+        <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
+          <li>Correct: <b>${stroop ? stroop.correct : "—"}</b></li>
+          <li>Incorrect: <b>${stroop ? stroop.incorrect : "—"}</b></li>
+          <li>Median RT: <b>${stroop ? stroop.median_rt_ms + " ms" : "—"}</b></li>
+          <li>Score: <b>${stroop ? stroop.score_0_100 : "—"} / 100</b></li>
+        </ul>
+      </div>
+
+      <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
+        <p style="margin:0 0 8px; font-weight:700;">PVT</p>
+        <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
+          <li>Median RT: <b>${pvt ? pvt.median_rt_ms + " ms" : "—"}</b></li>
+          <li>Lapses: <b>${pvt ? pvt.lapses : "—"}</b></li>
+          <li>False starts: <b>${pvt ? pvt.false_starts : "—"}</b></li>
+          <li>Score: <b>${pvt ? pvt.score_0_100 : "—"} / 100</b></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <p class="hint" style="text-align:center; margin-top:16px;">
+      Results submitted to Google Sheets. &nbsp; Session ID: ${SESSION.sessionId}
+    </p>
   `;
 }
 
@@ -704,7 +1070,7 @@ async function main() {
       return;
     }
 
-    const salted = `${CONFIG.HASHING.salt}::${alias}`;
+    const salted = \\`${CONFIG.HASHING.salt}::${alias}\`;
     const aliasHash = await sha256Hex(salted);
 
     SESSION.alias = alias;
@@ -797,7 +1163,7 @@ async function main() {
       [CHECKIN_ENTRY.app_version]:            payload.app_version,
       [CHECKIN_ENTRY.device_info]:            payload.device_info,
       [CHECKIN_ENTRY.session_number_today]:   String(payload.session_number_today),
-      [CHECKIN_ENTRY.is_first_session_today]: String(payload.is_first_session_today),
+      [CHECKIN_ENTRY.is_first_session_today]: String(payload.session_number_today),
       [CHECKIN_ENTRY.sleep_hours]:            String(payload.checkin.sleep_hours),
       [CHECKIN_ENTRY.shift_length_hours]:     String(payload.checkin.shift_length_hours),
       [CHECKIN_ENTRY.hours_into_shift]:       String(payload.checkin.hours_into_shift),
@@ -855,19 +1221,31 @@ async function main() {
       return;
     }
 
-    // Placeholder for Stroop & PVT
-    hide("explainSection");
-    show("gameSection");
-    document.getElementById("gameTitle").textContent = step.title;
-    document.getElementById("gameUI").innerHTML = `
-      <p class="hint"><b>${step.title} — coming soon.</b></p>
-      <button id="nextStepBtn">Continue</button>
-    `;
+    if (step.key === "stroop") {
+      runStroop({
+        durationSec: 60,
+        onDone: (result) => {
+          GAME_RESULTS.stroop = result;
+          flowIndex++;
+          flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
+        }
+      });
+      return;
+    }
 
-    document.getElementById("nextStepBtn").addEventListener("click", () => {
-      flowIndex++;
-      flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
-    });
+    if (step.key === "pvt") {
+      runPVT({
+        durationSec: 60,
+        minDelaySec: 2,
+        maxDelaySec: 10,
+        onDone: (result) => {
+          GAME_RESULTS.pvt = result;
+          flowIndex++;
+          flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
+        }
+      });
+      return;
+    }
   });
 
   // Finish -> back to alias screen
