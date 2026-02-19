@@ -608,7 +608,7 @@ function runStroop({ durationSec = 60, onDone }) {
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>"
+    </button>`
   ).join("");
 
   gameUI.innerHTML = `
