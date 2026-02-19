@@ -99,7 +99,8 @@ async function sha256Hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", enc);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+    .join(""
+  );
 }
 
 function nowMs() {
@@ -422,9 +423,9 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
 // FIX 4: 2-Back Game
 // ===============================
 function runNBack({ rounds = 25, nBack = 2, onDone }) {
-  const LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split(""); // consonants only — easier to distinguish
-  const DISPLAY_MS = 500;   // letter shown for 500ms
-  const ISI_MS = 2000;      // inter-stimulus interval (blank)
+  const LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("");
+  const DISPLAY_MS = 500;
+  const ISI_MS = 2000;
 
   hide("explainSection");
   show("gameSection");
@@ -456,24 +457,24 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
     </div>
   `;
 
-  const stimEl   = document.getElementById("nbackStimulus");
+  const stimEl     = document.getElementById("nbackStimulus");
   const feedbackEl = document.getElementById("nbackFeedback");
   const trialNumEl = document.getElementById("nbackTrialNum");
-  const hitsEl   = document.getElementById("nbackHits");
-  const missesEl = document.getElementById("nbackMisses");
-  const faEl     = document.getElementById("nbackFA");
-  const yesBtn   = document.getElementById("nbackYes");
-  const noBtn    = document.getElementById("nbackNo");
+  const hitsEl     = document.getElementById("nbackHits");
+  const missesEl   = document.getElementById("nbackMisses");
+  const faEl       = document.getElementById("nbackFA");
+  const yesBtn     = document.getElementById("nbackYes");
+  const noBtn      = document.getElementById("nbackNo");
 
   // Pre-generate sequence; ~30% of trials after position nBack are targets
   const sequence = [];
   for (let i = 0; i < rounds; i++) {
     if (i >= nBack && Math.random() < 0.30) {
-      sequence.push(sequence[i - nBack]); // deliberate match
+      sequence.push(sequence[i - nBack]);
     } else {
       let letter;
       do { letter = LETTERS[Math.floor(Math.random() * LETTERS.length)]; }
-      while (i >= nBack && letter === sequence[i - nBack]); // avoid accidental match
+      while (i >= nBack && letter === sequence[i - nBack]);
       sequence.push(letter);
     }
   }
@@ -501,14 +502,12 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   }
 
   function recordNoResponse() {
-    // Called at end of ISI if no response given for a valid trial
     if (trialIndex > nBack && !responded) {
       if (isTarget) {
         misses++;
         missesEl.textContent = String(misses);
         showFeedback("Miss!", "#c00");
       }
-      // No response to a non-target is correct (no false alarm) — silent
     }
   }
 
@@ -524,15 +523,12 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
     trialNumEl.textContent = String(trialIndex + 1);
     feedbackEl.textContent = "";
 
-    // Only enable buttons from trial nBack+1 onwards (need 2 prior items)
     setButtons(trialIndex >= nBack);
 
-    // Hide stimulus after DISPLAY_MS
     displayTimer = setTimeout(() => {
       stimEl.textContent = "";
     }, DISPLAY_MS);
 
-    // After full ISI, score non-responses then move on
     isiTimer = setTimeout(() => {
       recordNoResponse();
       trialIndex++;
@@ -542,7 +538,7 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
 
   function handleResponse(yes) {
     if (ended || trialIndex < nBack) return;
-    if (responded) return; // one response per trial
+    if (responded) return;
     responded = true;
 
     clearTimeout(isiTimer);
@@ -563,7 +559,6 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
       showFeedback("✓ Correct rejection", "#080");
     }
 
-    // Short pause then next trial
     isiTimer = setTimeout(() => {
       trialIndex++;
       runTrial();
@@ -573,7 +568,6 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   yesBtn.addEventListener("click", () => handleResponse(true));
   noBtn.addEventListener("click", () => handleResponse(false));
 
-  // Keyboard shortcuts: y / n
   function keyHandler(e) {
     if (e.key.toLowerCase() === "y") handleResponse(true);
     if (e.key.toLowerCase() === "n") handleResponse(false);
@@ -587,9 +581,7 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
     window.removeEventListener("keydown", keyHandler);
     setButtons(false);
 
-    // Targets present (trials where a match existed)
     const targetCount = sequence.filter((_, i) => i >= nBack && sequence[i] === sequence[i - nBack]).length;
-    // Score: hits / targets present, penalised by false alarms
     const rawScore = targetCount > 0 ? (hits - falseAlarms) / targetCount : 0;
     const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
 
@@ -633,21 +625,20 @@ function showResultsScreen() {
     [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt ? sdmt.incorrect   : ""),
     [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt ? sdmt.score_0_100 : ""),
 
-    [RESULTS_ENTRY.nback_hits]:        String(nback ? nback.hits         : ""),
-    [RESULTS_ENTRY.nback_misses]:      String(nback ? nback.misses       : ""),
-    [RESULTS_ENTRY.nback_false_alarms]:String(nback ? nback.false_alarms : ""),
-    [RESULTS_ENTRY.nback_score_0_100]: String(nback ? nback.score_0_100  : ""),
+    [RESULTS_ENTRY.nback_hits]:         String(nback ? nback.hits         : ""),
+    [RESULTS_ENTRY.nback_misses]:       String(nback ? nback.misses       : ""),
+    [RESULTS_ENTRY.nback_false_alarms]: String(nback ? nback.false_alarms : ""),
+    [RESULTS_ENTRY.nback_score_0_100]:  String(nback ? nback.score_0_100  : ""),
 
-    // Stroop & PVT not yet implemented — send blanks
-    [RESULTS_ENTRY.stroop_correct]:       "",
-    [RESULTS_ENTRY.stroop_incorrect]:     "",
-    [RESULTS_ENTRY.stroop_median_rt_ms]:  "",
-    [RESULTS_ENTRY.stroop_score_0_100]:   "",
+    [RESULTS_ENTRY.stroop_correct]:      "",
+    [RESULTS_ENTRY.stroop_incorrect]:    "",
+    [RESULTS_ENTRY.stroop_median_rt_ms]: "",
+    [RESULTS_ENTRY.stroop_score_0_100]:  "",
 
-    [RESULTS_ENTRY.pvt_median_rt_ms]:  "",
-    [RESULTS_ENTRY.pvt_lapses]:        "",
-    [RESULTS_ENTRY.pvt_false_starts]:  "",
-    [RESULTS_ENTRY.pvt_score_0_100]:   "",
+    [RESULTS_ENTRY.pvt_median_rt_ms]: "",
+    [RESULTS_ENTRY.pvt_lapses]:       "",
+    [RESULTS_ENTRY.pvt_false_starts]: "",
+    [RESULTS_ENTRY.pvt_score_0_100]:  "",
 
     [RESULTS_ENTRY.overall_score_0_100]: "",
     [RESULTS_ENTRY.overall_band]:        "",
@@ -691,12 +682,12 @@ async function main() {
   const cooldownOverrideBtn = document.getElementById("cooldownOverrideBtn");
   const overrideMsg         = document.getElementById("overrideMsg");
 
-  const submitBtn = document.getElementById("submitCheckinBtn");
-  const submitMsg = document.getElementById("submitMsg");
+  const submitBtn  = document.getElementById("submitCheckinBtn");
+  const submitMsg  = document.getElementById("submitMsg");
 
-  const startBtn    = document.getElementById("startSessionBtn");
+  const startBtn     = document.getElementById("startSessionBtn");
   const beginTestBtn = document.getElementById("beginTestBtn");
-  const finishBtn   = document.getElementById("finishBtn");
+  const finishBtn    = document.getElementById("finishBtn");
 
   // Alias -> cooldown check -> checkin
   aliasBtn.addEventListener("click", async () => {
