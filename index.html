@@ -1,82 +1,125 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fatigue Check</title>
-  <link rel="stylesheet" href="assets/style.css" />
-</head>
-<body>
-  <main class="card">
-    <h1>Fatigue Check</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FD Pilot</title>
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
 
-    <section id="aliasSection">
-      <h2>Enter your code</h2>
-      <input id="aliasInput" placeholder="e.g. a1B9" maxlength="4" autocapitalize="characters" />
-      <button id="aliasBtn">Continue</button>
-      <p class="hint">Code is 4 characters: 2 letters + 2 numbers (any order).</p>
-      <p id="aliasError" class="error"></p>
-    </section>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Fatigue Check</h1>
+        <p class="sub">Quick pilot check-in + cognitive tests (60s each)</p>
+      </header>
 
-    <section id="cooldownSection" class="hidden">
-      <h2>Next check-in not available yet</h2>
-      <p id="cooldownText"></p>
-      <button id="cooldownOverrideBtn">Admin override</button>
-      <p id="overrideMsg" class="hint"></p>
-    </section>
+      <!-- Alias -->
+      <section id="aliasSection" class="card">
+        <h2>Enter your code</h2>
+        <p class="hint">4 chars: 2 letters + 2 numbers (any order)</p>
+        <div class="row">
+          <input id="aliasInput" placeholder="e.g. A1B9" maxlength="4" />
+          <button id="aliasBtn">Continue</button>
+        </div>
+        <p id="aliasError" class="error"></p>
+      </section>
 
-    <section id="checkinSection" class="hidden">
-      <h2>Check-in</h2>
+      <!-- Cooldown -->
+      <section id="cooldownSection" class="hidden card">
+        <h2>Not available yet</h2>
+        <p id="cooldownText" class="hint"></p>
+        <button id="cooldownOverrideBtn" class="secondary">Admin override</button>
+        <p id="overrideMsg" class="hint"></p>
+      </section>
 
-      <div class="grid">
-        <label>Sleep (hours)
-          <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
-        </label>
+      <!-- Check-in -->
+      <section id="checkinSection" class="hidden card">
+        <h2>Check-in</h2>
 
-        <label>Shift length (hours)
-          <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
-        </label>
+        <div class="grid">
+          <label>Sleep (hours)
+            <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
+          </label>
 
-        <label>Hours into shift
-          <input id="hoursInto" type="number" min="0" max="24" step="0.5" />
-        </label>
+          <label>Shift length (hours)
+            <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
+          </label>
 
-        <label>Caffeine
-          <select id="caffeine">
-            <option value="none">None</option>
-            <option value="low">Low</option>
-            <option value="med">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </label>
+          <label>Hours into shift
+            <input id="hoursInto" type="number" min="0" max="24" step="0.5" />
+          </label>
 
-        <label>Fatigue (0–10)
-          <input id="fatigue" type="number" min="0" max="10" step="1" />
-        </label>
+          <label>Caffeine
+            <select id="caffeine">
+              <option value="">Select…</option>
+              <option value="none">None</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
 
-        <label>Motivation (0–10)
-          <input id="motivation" type="number" min="0" max="10" step="1" />
-        </label>
+          <label>Fatigue (0–10)
+            <input id="fatigue" type="number" min="0" max="10" step="1" />
+          </label>
 
-        <label>Age (optional; asked once)
-          <input id="age" type="number" min="16" max="100" step="1" />
-        </label>
-      </div>
+          <label>Motivation (0–10)
+            <input id="motivation" type="number" min="0" max="10" step="1" />
+          </label>
 
-      <fieldset>
-        <legend>Symptoms (optional)</legend>
-        <label><input type="checkbox" value="headache" class="symptom"> Headache</label>
-        <label><input type="checkbox" value="fatigue" class="symptom"> Fatigue</label>
-        <label><input type="checkbox" value="dizzy" class="symptom"> Dizziness</label>
-        <label><input type="checkbox" value="stress" class="symptom"> Stress</label>
-        <label><input type="checkbox" value="low_mood" class="symptom"> Low mood</label>
-      </fieldset>
+          <label>Age
+            <input id="age" type="number" min="16" max="90" step="1" />
+          </label>
+        </div>
 
-      <button id="submitCheckinBtn">Submit & start tests</button>
-      <p id="submitMsg" class="hint"></p>
-    </section>
-  </main>
+        <fieldset class="fieldset">
+          <legend>Symptoms (tick any)</legend>
+          <label><input class="symptom" type="checkbox" value="fatigue" /> Fatigue</label>
+          <label><input class="symptom" type="checkbox" value="headache" /> Headache</label>
+          <label><input class="symptom" type="checkbox" value="brain_fog" /> Brain fog</label>
+          <label><input class="symptom" type="checkbox" value="irritable" /> Irritable</label>
+          <label><input class="symptom" type="checkbox" value="drowsy" /> Drowsy</label>
+        </fieldset>
 
-  <script src="src/app.js"></script>
-</body>
+        <button id="submitCheckinBtn">Submit check-in</button>
+        <p id="submitMsg" class="hint"></p>
+      </section>
+
+      <!-- Start -->
+      <section id="startSection" class="hidden card">
+        <h2>Ready?</h2>
+        <p class="hint">
+          You’ll complete 4 quick tests (60s each). Try to focus and respond as accurately as you can.
+        </p>
+        <button id="startSessionBtn">Start</button>
+      </section>
+
+      <!-- Explanation -->
+      <section id="explainSection" class="hidden card">
+        <h2 id="explainTitle">Test</h2>
+        <p id="explainText"></p>
+        <p class="hint">Duration: <b>60 seconds</b></p>
+        <button id="beginTestBtn">Begin</button>
+      </section>
+
+      <!-- Game container -->
+      <section id="gameSection" class="hidden card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h2 id="gameTitle" style="margin:0;">Game</h2>
+          <div><b id="gameTimer">60</b>s</div>
+        </div>
+        <div id="gameUI" style="margin-top:16px;"></div>
+      </section>
+
+      <!-- Results -->
+      <section id="resultsSection" class="hidden card">
+        <h2>Results</h2>
+        <div id="resultsSummary"></div>
+        <button id="finishBtn">Finish</button>
+      </section>
+    </main>
+
+    <script src="src/app.js"></script>
+  </body>
 </html>
