@@ -1,5 +1,5 @@
 // ===============================
-// FORM 1: CHECK-IN (your existing working form)
+// FORM 1: CHECK-IN
 // ===============================
 const FORM_CHECKIN_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfSO6_C_mIWA1G1OHuCwPIaOn_srffgsm6XmM8Y2SKKwhGyBA/formResponse";
@@ -23,8 +23,7 @@ const CHECKIN_ENTRY = {
 };
 
 // ===============================
-// FORM 2: GAME RESULTS (your new form mapping)
-// Included now; we’ll submit once all games exist.
+// FORM 2: GAME RESULTS
 // ===============================
 const FORM_RESULTS_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSeL7efoV0n5cBJeJlM_sMfOufITpQcFirPkzAwC7-7uSmmoyA/formResponse";
@@ -168,8 +167,7 @@ function getCachedAge(aliasHash) {
 }
 
 // --------------------
-// Google Form submit via hidden iframe form
-// (avoids CORS / fetch failures)
+// Google Form submit via hidden iframe
 // --------------------
 function submitHiddenForm(url, fields) {
   let iframe = document.getElementById("gf_hidden_iframe");
@@ -211,7 +209,6 @@ let SESSION = {
   isFirstToday: false
 };
 
-// Results for this run (we’ll submit later once all games implemented)
 let GAME_RESULTS = {
   sdmt: null,
   nback: null,
@@ -226,12 +223,12 @@ const FLOW = [
   {
     key: "sdmt",
     title: "SDMT",
-    text: "Match the symbol to the correct number as quickly and accurately as you can."
+    text: "A key at the top shows 9 symbols, each paired with a number. A symbol appears in the centre — press the matching number as fast as you can. You have 4 seconds per symbol before it counts as a miss."
   },
   {
     key: "nback",
-    title: "2-back",
-    text: "Decide whether the current item matches the one from 2 steps ago. Respond YES/NO."
+    title: "2-Back",
+    text: "Letters appear one at a time. Press YES if the letter matches the one shown 2 steps ago, or NO if it doesn't. Stay focused — it gets tricky!"
   },
   {
     key: "stroop",
@@ -248,13 +245,14 @@ const FLOW = [
 let flowIndex = 0;
 
 // ===============================
-// SDMT Game (60s)
+// FIX 1 + 2: SDMT Game
+// — Table-aligned key so symbols & numbers line up
+// — 4-second per-trial timeout counts as incorrect if no answer
 // ===============================
-function runSDMT({ durationSec = 60, onDone }) {
-  // Fixed symbols each time
+function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
   const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];
 
-  // Randomise digit mapping each run (prevents learning)
+  // Shuffle digits so mapping changes each run
   const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   for (let i = digits.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -264,7 +262,6 @@ function runSDMT({ durationSec = 60, onDone }) {
   const mapSymbolToDigit = new Map();
   SYMBOLS.forEach((sym, idx) => mapSymbolToDigit.set(sym, digits[idx]));
 
-  // Metrics
   let correct = 0;
   let incorrect = 0;
   let trials = 0;
@@ -280,36 +277,42 @@ function runSDMT({ durationSec = 60, onDone }) {
 
   gameTitle.textContent = "Symbol Digit Modality Test (SDMT)";
 
-  const mappingSymbolsRow = SYMBOLS.map((s) => `<span style="margin:0 8px;">${s}</span>`).join("");
-  const mappingDigitsRow = SYMBOLS.map((s) => `<span style="margin:0 10px;">${mapSymbolToDigit.get(s)}</span>`).join("");
+  // FIX 1: Use a proper table for aligned key display
+  const keyTableCells = SYMBOLS.map(
+    (s) => `<td style="text-align:center; padding:4px 10px; font-size:26px; line-height:1;">${s}</td>`
+  ).join("");
+  const digitTableCells = SYMBOLS.map(
+    (s) => `<td style="text-align:center; padding:4px 10px; font-size:20px; font-weight:700;">${mapSymbolToDigit.get(s)}</td>`
+  ).join("");
 
   gameUI.innerHTML = `
-    <div style="text-align:center;">
-      <div style="font-size:28px; line-height:1.2; margin-top:6px;">
-        ${mappingSymbolsRow}
-      </div>
-      <div style="font-size:22px; margin-top:8px; opacity:0.95;">
-        ${mappingDigitsRow}
-      </div>
+    <div style="overflow-x:auto; text-align:center;">
+      <table style="margin:0 auto; border-collapse:collapse; border:1px solid #ccc; border-radius:8px; overflow:hidden;">
+        <tbody>
+          <tr style="background:#f5f5f5;">${keyTableCells}</tr>
+          <tr>${digitTableCells}</tr>
+        </tbody>
+      </table>
     </div>
 
-    <div style="display:flex; justify-content:center; align-items:center; height:190px; margin-top:16px;">
+    <div style="display:flex; justify-content:center; align-items:center; height:160px; margin-top:16px;">
       <div id="sdmtTarget" style="font-size:92px; font-weight:700;">${currentSymbol}</div>
     </div>
 
-    <div id="sdmtFeedback" class="hint" style="text-align:center; min-height:22px;"></div>
+    <div style="text-align:center; margin-top:4px;">
+      <span id="sdmtTrialTimer" style="font-size:18px; color:#e44; font-weight:700;"></span>
+    </div>
+
+    <div id="sdmtFeedback" style="text-align:center; min-height:22px; font-size:15px; margin-top:6px;"></div>
 
     <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
       ${[1,2,3,4,5,6,7,8,9]
-        .map(
-          (n) =>
-            `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px;">${n}</button>`
-        )
+        .map((n) => `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px; font-size:18px;">${n}</button>`)
         .join("")}
     </div>
 
     <div class="hint" style="text-align:center; margin-top:14px;">
-      Correct: <b id="sdmtCorrect">${correct}</b> &nbsp; | &nbsp; Incorrect: <b id="sdmtIncorrect">${incorrect}</b>
+      Correct: <b id="sdmtCorrect">0</b> &nbsp;|&nbsp; Incorrect: <b id="sdmtIncorrect">0</b>
     </div>
   `;
 
@@ -317,35 +320,73 @@ function runSDMT({ durationSec = 60, onDone }) {
   const feedbackEl = document.getElementById("sdmtFeedback");
   const correctEl = document.getElementById("sdmtCorrect");
   const incorrectEl = document.getElementById("sdmtIncorrect");
+  const trialTimerEl = document.getElementById("sdmtTrialTimer");
 
   const startMs = Date.now();
   let ended = false;
+  let trialStartMs = Date.now();
+  let trialTimeoutHandle = null;
 
+  // Overall game countdown
   function updateTimer() {
     const elapsed = (Date.now() - startMs) / 1000;
     const remaining = Math.max(0, Math.ceil(durationSec - elapsed));
-    timerEl.textContent = String(remaining);
+    timerEl.textContent = String(remaining) + "s";
     if (remaining <= 0 && !ended) finish();
   }
   const timerInt = setInterval(updateTimer, 200);
   updateTimer();
 
+  // FIX 2: Per-trial countdown display
+  function updateTrialTimer() {
+    if (ended) return;
+    const elapsed = (Date.now() - trialStartMs) / 1000;
+    const remaining = Math.max(0, trialTimeoutSec - elapsed);
+    trialTimerEl.textContent = remaining.toFixed(1) + "s";
+  }
+  const trialTimerInt = setInterval(updateTrialTimer, 100);
+
+  function startTrialTimeout() {
+    clearTimeout(trialTimeoutHandle);
+    trialStartMs = Date.now();
+    trialTimeoutHandle = setTimeout(() => {
+      if (ended) return;
+      // Time's up for this trial — count as miss
+      incorrect++;
+      feedbackEl.textContent = `⏱ Too slow! (was ${mapSymbolToDigit.get(currentSymbol)})`;
+      feedbackEl.style.color = "#c00";
+      incorrectEl.textContent = String(incorrect);
+      nextTrial();
+    }, trialTimeoutSec * 1000);
+  }
+
   function nextTrial() {
     trials++;
     currentSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
     targetEl.textContent = currentSymbol;
+    startTrialTimeout();
+    // Clear feedback colour after short delay
+    setTimeout(() => {
+      if (!ended) feedbackEl.style.color = "";
+    }, 600);
   }
+
+  // Start first trial timeout
+  startTrialTimeout();
 
   function handleAnswer(n) {
     if (ended) return;
+    clearTimeout(trialTimeoutHandle);
 
     const correctDigit = mapSymbolToDigit.get(currentSymbol);
     if (n === correctDigit) {
       correct++;
       feedbackEl.textContent = "✓ Correct";
+      feedbackEl.style.color = "#080";
     } else {
       incorrect++;
       feedbackEl.textContent = `✗ Incorrect (was ${correctDigit})`;
+      feedbackEl.style.color = "#c00";
     }
     correctEl.textContent = String(correct);
     incorrectEl.textContent = String(incorrect);
@@ -353,12 +394,10 @@ function runSDMT({ durationSec = 60, onDone }) {
     nextTrial();
   }
 
-  // Buttons
   Array.from(gameUI.querySelectorAll(".sdmtBtn")).forEach((btn) => {
     btn.addEventListener("click", () => handleAnswer(Number(btn.dataset.n)));
   });
 
-  // Optional keyboard 1–9
   function keyHandler(e) {
     if (/^[1-9]$/.test(e.key)) handleAnswer(Number(e.key));
   }
@@ -367,20 +406,197 @@ function runSDMT({ durationSec = 60, onDone }) {
   function finish() {
     ended = true;
     clearInterval(timerInt);
+    clearInterval(trialTimerInt);
+    clearTimeout(trialTimeoutHandle);
     window.removeEventListener("keydown", keyHandler);
+    trialTimerEl.textContent = "";
 
-    // Score (simple + robust for 60s)
-    // Reward correct, small penalty for incorrect, scaled to 0–100.
     const raw = Math.max(0, correct - 0.25 * incorrect);
     const score = Math.max(0, Math.min(100, Math.round((raw / 60) * 100)));
 
-    onDone?.({
-      correct,
-      incorrect,
-      trials,
-      score_0_100: score
-    });
+    onDone?.({ correct, incorrect, trials, score_0_100: score });
   }
+}
+
+// ===============================
+// FIX 4: 2-Back Game
+// ===============================
+function runNBack({ rounds = 25, nBack = 2, onDone }) {
+  const LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split(""); // consonants only — easier to distinguish
+  const DISPLAY_MS = 500;   // letter shown for 500ms
+  const ISI_MS = 2000;      // inter-stimulus interval (blank)
+
+  hide("explainSection");
+  show("gameSection");
+
+  const gameTitle = document.getElementById("gameTitle");
+  const gameUI = document.getElementById("gameUI");
+  const timerEl = document.getElementById("gameTimer");
+  timerEl.textContent = "";
+
+  gameTitle.textContent = "2-Back Task";
+
+  gameUI.innerHTML = `
+    <div style="text-align:center; margin-top:20px;">
+      <p class="hint">Does this letter match the one from <b>2 steps ago</b>?</p>
+      <div id="nbackStimulus" style="font-size:120px; font-weight:700; height:160px; line-height:160px; letter-spacing:2px;">
+        &nbsp;
+      </div>
+      <div id="nbackFeedback" style="min-height:28px; font-size:16px; margin-top:8px;"></div>
+      <div style="display:flex; justify-content:center; gap:24px; margin-top:20px;">
+        <button id="nbackYes" style="width:110px; height:56px; font-size:20px; background:#1a73e8; color:#fff; border:none; border-radius:10px; cursor:pointer;">YES</button>
+        <button id="nbackNo"  style="width:110px; height:56px; font-size:20px; background:#555;   color:#fff; border:none; border-radius:10px; cursor:pointer;">NO</button>
+      </div>
+      <div class="hint" style="margin-top:20px;">
+        Trial: <b id="nbackTrialNum">0</b> / ${rounds} &nbsp;|&nbsp;
+        Hits: <b id="nbackHits">0</b> &nbsp;|&nbsp;
+        Misses: <b id="nbackMisses">0</b> &nbsp;|&nbsp;
+        False alarms: <b id="nbackFA">0</b>
+      </div>
+    </div>
+  `;
+
+  const stimEl   = document.getElementById("nbackStimulus");
+  const feedbackEl = document.getElementById("nbackFeedback");
+  const trialNumEl = document.getElementById("nbackTrialNum");
+  const hitsEl   = document.getElementById("nbackHits");
+  const missesEl = document.getElementById("nbackMisses");
+  const faEl     = document.getElementById("nbackFA");
+  const yesBtn   = document.getElementById("nbackYes");
+  const noBtn    = document.getElementById("nbackNo");
+
+  // Pre-generate sequence; ~30% of trials after position nBack are targets
+  const sequence = [];
+  for (let i = 0; i < rounds; i++) {
+    if (i >= nBack && Math.random() < 0.30) {
+      sequence.push(sequence[i - nBack]); // deliberate match
+    } else {
+      let letter;
+      do { letter = LETTERS[Math.floor(Math.random() * LETTERS.length)]; }
+      while (i >= nBack && letter === sequence[i - nBack]); // avoid accidental match
+      sequence.push(letter);
+    }
+  }
+
+  let trialIndex = 0;
+  let hits = 0;
+  let misses = 0;
+  let falseAlarms = 0;
+  let responded = false;
+  let isTarget = false;
+  let displayTimer = null;
+  let isiTimer = null;
+  let ended = false;
+
+  function setButtons(enabled) {
+    yesBtn.disabled = !enabled;
+    noBtn.disabled = !enabled;
+    yesBtn.style.opacity = enabled ? "1" : "0.4";
+    noBtn.style.opacity = enabled ? "1" : "0.4";
+  }
+
+  function showFeedback(text, color) {
+    feedbackEl.textContent = text;
+    feedbackEl.style.color = color;
+  }
+
+  function recordNoResponse() {
+    // Called at end of ISI if no response given for a valid trial
+    if (trialIndex > nBack && !responded) {
+      if (isTarget) {
+        misses++;
+        missesEl.textContent = String(misses);
+        showFeedback("Miss!", "#c00");
+      }
+      // No response to a non-target is correct (no false alarm) — silent
+    }
+  }
+
+  function runTrial() {
+    if (ended) return;
+    if (trialIndex >= rounds) { finish(); return; }
+
+    responded = false;
+    const letter = sequence[trialIndex];
+    isTarget = trialIndex >= nBack && sequence[trialIndex] === sequence[trialIndex - nBack];
+
+    stimEl.textContent = letter;
+    trialNumEl.textContent = String(trialIndex + 1);
+    feedbackEl.textContent = "";
+
+    // Only enable buttons from trial nBack+1 onwards (need 2 prior items)
+    setButtons(trialIndex >= nBack);
+
+    // Hide stimulus after DISPLAY_MS
+    displayTimer = setTimeout(() => {
+      stimEl.textContent = "";
+    }, DISPLAY_MS);
+
+    // After full ISI, score non-responses then move on
+    isiTimer = setTimeout(() => {
+      recordNoResponse();
+      trialIndex++;
+      runTrial();
+    }, ISI_MS);
+  }
+
+  function handleResponse(yes) {
+    if (ended || trialIndex < nBack) return;
+    if (responded) return; // one response per trial
+    responded = true;
+
+    clearTimeout(isiTimer);
+
+    if (yes && isTarget) {
+      hits++;
+      hitsEl.textContent = String(hits);
+      showFeedback("✓ Hit!", "#080");
+    } else if (yes && !isTarget) {
+      falseAlarms++;
+      faEl.textContent = String(falseAlarms);
+      showFeedback("✗ False alarm", "#c00");
+    } else if (!yes && isTarget) {
+      misses++;
+      missesEl.textContent = String(misses);
+      showFeedback("✗ Miss", "#c00");
+    } else {
+      showFeedback("✓ Correct rejection", "#080");
+    }
+
+    // Short pause then next trial
+    isiTimer = setTimeout(() => {
+      trialIndex++;
+      runTrial();
+    }, 600);
+  }
+
+  yesBtn.addEventListener("click", () => handleResponse(true));
+  noBtn.addEventListener("click", () => handleResponse(false));
+
+  // Keyboard shortcuts: y / n
+  function keyHandler(e) {
+    if (e.key.toLowerCase() === "y") handleResponse(true);
+    if (e.key.toLowerCase() === "n") handleResponse(false);
+  }
+  window.addEventListener("keydown", keyHandler);
+
+  function finish() {
+    ended = true;
+    clearTimeout(displayTimer);
+    clearTimeout(isiTimer);
+    window.removeEventListener("keydown", keyHandler);
+    setButtons(false);
+
+    // Targets present (trials where a match existed)
+    const targetCount = sequence.filter((_, i) => i >= nBack && sequence[i] === sequence[i - nBack]).length;
+    // Score: hits / targets present, penalised by false alarms
+    const rawScore = targetCount > 0 ? (hits - falseAlarms) / targetCount : 0;
+    const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+
+    onDone?.({ hits, misses, false_alarms: falseAlarms, score_0_100: score });
+  }
+
+  runTrial();
 }
 
 // ===============================
@@ -403,18 +619,61 @@ function showResultsScreen() {
   hide("startSection");
   show("resultsSection");
 
-  const sdmt = GAME_RESULTS.sdmt;
+  const sdmt  = GAME_RESULTS.sdmt;
+  const nback = GAME_RESULTS.nback;
+
+  // FIX 3: Submit game results to Google Sheet
+  submitHiddenForm(FORM_RESULTS_URL, {
+    [RESULTS_ENTRY.timestamp_utc]: new Date().toISOString(),
+    [RESULTS_ENTRY.session_id]:    SESSION.sessionId,
+    [RESULTS_ENTRY.alias_hash]:    SESSION.aliasHash,
+    [RESULTS_ENTRY.app_version]:   CONFIG.APP_VERSION,
+
+    [RESULTS_ENTRY.sdmt_correct]:     String(sdmt ? sdmt.correct     : ""),
+    [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt ? sdmt.incorrect   : ""),
+    [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt ? sdmt.score_0_100 : ""),
+
+    [RESULTS_ENTRY.nback_hits]:        String(nback ? nback.hits         : ""),
+    [RESULTS_ENTRY.nback_misses]:      String(nback ? nback.misses       : ""),
+    [RESULTS_ENTRY.nback_false_alarms]:String(nback ? nback.false_alarms : ""),
+    [RESULTS_ENTRY.nback_score_0_100]: String(nback ? nback.score_0_100  : ""),
+
+    // Stroop & PVT not yet implemented — send blanks
+    [RESULTS_ENTRY.stroop_correct]:       "",
+    [RESULTS_ENTRY.stroop_incorrect]:     "",
+    [RESULTS_ENTRY.stroop_median_rt_ms]:  "",
+    [RESULTS_ENTRY.stroop_score_0_100]:   "",
+
+    [RESULTS_ENTRY.pvt_median_rt_ms]:  "",
+    [RESULTS_ENTRY.pvt_lapses]:        "",
+    [RESULTS_ENTRY.pvt_false_starts]:  "",
+    [RESULTS_ENTRY.pvt_score_0_100]:   "",
+
+    [RESULTS_ENTRY.overall_score_0_100]: "",
+    [RESULTS_ENTRY.overall_band]:        "",
+    [RESULTS_ENTRY.advice_text]:         ""
+  });
 
   document.getElementById("resultsSummary").innerHTML = `
-    <p><b>Session complete (SDMT implemented, others pending).</b></p>
+    <p><b>Session complete!</b></p>
+
     <p><b>SDMT</b></p>
     <ul>
       <li>Correct: <b>${sdmt ? sdmt.correct : "-"}</b></li>
       <li>Incorrect: <b>${sdmt ? sdmt.incorrect : "-"}</b></li>
       <li>Score (0–100): <b>${sdmt ? sdmt.score_0_100 : "-"}</b></li>
     </ul>
-    <p class="hint">Next step: implement 2-back, Stroop and PVT, then submit full results to the Game Results form.</p>
-    <p class="hint">Session ID: ${SESSION.sessionId}</p>
+
+    <p><b>2-Back</b></p>
+    <ul>
+      <li>Hits: <b>${nback ? nback.hits : "-"}</b></li>
+      <li>Misses: <b>${nback ? nback.misses : "-"}</b></li>
+      <li>False alarms: <b>${nback ? nback.false_alarms : "-"}</b></li>
+      <li>Score (0–100): <b>${nback ? nback.score_0_100 : "-"}</b></li>
+    </ul>
+
+    <p class="hint">Results submitted to Google Sheets. &nbsp; Session ID: ${SESSION.sessionId}</p>
+    <p class="hint">Stroop &amp; PVT coming next.</p>
   `;
 }
 
@@ -424,24 +683,22 @@ function showResultsScreen() {
 async function main() {
   await loadConfig();
 
-  // Elements
-  const aliasInput = document.getElementById("aliasInput");
-  const aliasBtn = document.getElementById("aliasBtn");
-  const aliasError = document.getElementById("aliasError");
+  const aliasInput  = document.getElementById("aliasInput");
+  const aliasBtn    = document.getElementById("aliasBtn");
+  const aliasError  = document.getElementById("aliasError");
 
-  const cooldownText = document.getElementById("cooldownText");
+  const cooldownText        = document.getElementById("cooldownText");
   const cooldownOverrideBtn = document.getElementById("cooldownOverrideBtn");
-  const overrideMsg = document.getElementById("overrideMsg");
+  const overrideMsg         = document.getElementById("overrideMsg");
 
   const submitBtn = document.getElementById("submitCheckinBtn");
   const submitMsg = document.getElementById("submitMsg");
 
-  const startBtn = document.getElementById("startSessionBtn");
+  const startBtn    = document.getElementById("startSessionBtn");
   const beginTestBtn = document.getElementById("beginTestBtn");
+  const finishBtn   = document.getElementById("finishBtn");
 
-  const finishBtn = document.getElementById("finishBtn");
-
-  // Alias -> check cooldown -> checkin
+  // Alias -> cooldown check -> checkin
   aliasBtn.addEventListener("click", async () => {
     aliasError.textContent = "";
 
@@ -462,11 +719,9 @@ async function main() {
     SESSION.alias = alias;
     SESSION.aliasHash = aliasHash;
 
-    // Prefill age if previously stored
     const cachedAge = getCachedAge(aliasHash);
     if (cachedAge) document.getElementById("age").value = cachedAge;
 
-    // Cooldown check
     const until = getCooldownUntilMs(aliasHash);
     if (nowMs() < until) {
       hide("aliasSection");
@@ -503,75 +758,69 @@ async function main() {
     }
   });
 
-  // Submit check-in -> Start screen
+  // Submit check-in
   submitBtn.addEventListener("click", () => {
     submitMsg.textContent = "";
     submitBtn.disabled = true;
 
-    const sleep_hours = Number(document.getElementById("sleepHours").value || "");
-    const shift_length_hours = Number(document.getElementById("shiftLen").value || "");
-    const hours_into_shift = Number(document.getElementById("hoursInto").value || "");
-    const caffeine_level = document.getElementById("caffeine").value || "";
-    const fatigue_scale = Number(document.getElementById("fatigue").value || "");
-    const motivation_scale = Number(document.getElementById("motivation").value || "");
-    const age = Number(document.getElementById("age").value || "");
+    const sleep_hours        = Number(document.getElementById("sleepHours").value || "");
+    const shift_length_hours = Number(document.getElementById("shiftLen").value   || "");
+    const hours_into_shift   = Number(document.getElementById("hoursInto").value  || "");
+    const caffeine_level     = document.getElementById("caffeine").value || "";
+    const fatigue_scale      = Number(document.getElementById("fatigue").value    || "");
+    const motivation_scale   = Number(document.getElementById("motivation").value || "");
+    const age                = Number(document.getElementById("age").value        || "");
 
     if (age) cacheAgeIfProvided(SESSION.aliasHash, age);
 
-    SESSION.sessionId = uuidv4();
-    SESSION.sessionNumberToday = incrementSessionCountToday(SESSION.aliasHash);
-    SESSION.isFirstToday = SESSION.sessionNumberToday === 1;
+    SESSION.sessionId           = uuidv4();
+    SESSION.sessionNumberToday  = incrementSessionCountToday(SESSION.aliasHash);
+    SESSION.isFirstToday        = SESSION.sessionNumberToday === 1;
 
     const payload = {
-      timestamp_utc: new Date().toISOString(),
-      session_id: SESSION.sessionId,
-      alias_hash: SESSION.aliasHash,
-      app_version: CONFIG.APP_VERSION,
-      device_info: deviceInfo(),
-      session_number_today: SESSION.sessionNumberToday,
+      timestamp_utc:          new Date().toISOString(),
+      session_id:             SESSION.sessionId,
+      alias_hash:             SESSION.aliasHash,
+      app_version:            CONFIG.APP_VERSION,
+      device_info:            deviceInfo(),
+      session_number_today:   SESSION.sessionNumberToday,
       is_first_session_today: SESSION.isFirstToday,
       checkin: {
-        sleep_hours: Number.isFinite(sleep_hours) ? sleep_hours : "",
+        sleep_hours:        Number.isFinite(sleep_hours)        ? sleep_hours        : "",
         shift_length_hours: Number.isFinite(shift_length_hours) ? shift_length_hours : "",
-        hours_into_shift: Number.isFinite(hours_into_shift) ? hours_into_shift : "",
+        hours_into_shift:   Number.isFinite(hours_into_shift)   ? hours_into_shift   : "",
         caffeine_level,
-        fatigue_scale: Number.isFinite(fatigue_scale) ? fatigue_scale : "",
-        motivation_scale: Number.isFinite(motivation_scale) ? motivation_scale : "",
-        symptoms: selectedSymptoms(),
-        age: Number.isFinite(age) ? age : ""
+        fatigue_scale:      Number.isFinite(fatigue_scale)      ? fatigue_scale      : "",
+        motivation_scale:   Number.isFinite(motivation_scale)   ? motivation_scale   : "",
+        symptoms:           selectedSymptoms(),
+        age:                Number.isFinite(age)                ? age                : ""
       }
     };
 
-    // Local backup
     localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
 
-    // Submit to check-in form
     submitHiddenForm(FORM_CHECKIN_URL, {
-      [CHECKIN_ENTRY.timestamp_utc]: payload.timestamp_utc,
-      [CHECKIN_ENTRY.session_id]: payload.session_id,
-      [CHECKIN_ENTRY.alias_hash]: payload.alias_hash,
-      [CHECKIN_ENTRY.app_version]: payload.app_version,
-      [CHECKIN_ENTRY.device_info]: payload.device_info,
-      [CHECKIN_ENTRY.session_number_today]: String(payload.session_number_today),
+      [CHECKIN_ENTRY.timestamp_utc]:          payload.timestamp_utc,
+      [CHECKIN_ENTRY.session_id]:             payload.session_id,
+      [CHECKIN_ENTRY.alias_hash]:             payload.alias_hash,
+      [CHECKIN_ENTRY.app_version]:            payload.app_version,
+      [CHECKIN_ENTRY.device_info]:            payload.device_info,
+      [CHECKIN_ENTRY.session_number_today]:   String(payload.session_number_today),
       [CHECKIN_ENTRY.is_first_session_today]: String(payload.is_first_session_today),
-
-      [CHECKIN_ENTRY.sleep_hours]: String(payload.checkin.sleep_hours),
-      [CHECKIN_ENTRY.shift_length_hours]: String(payload.checkin.shift_length_hours),
-      [CHECKIN_ENTRY.hours_into_shift]: String(payload.checkin.hours_into_shift),
-      [CHECKIN_ENTRY.caffeine_level]: String(payload.checkin.caffeine_level),
-      [CHECKIN_ENTRY.fatigue_scale]: String(payload.checkin.fatigue_scale),
-      [CHECKIN_ENTRY.motivation_scale]: String(payload.checkin.motivation_scale),
-      [CHECKIN_ENTRY.symptoms]: (payload.checkin.symptoms || []).join("|"),
-      [CHECKIN_ENTRY.age]: String(payload.checkin.age)
+      [CHECKIN_ENTRY.sleep_hours]:            String(payload.checkin.sleep_hours),
+      [CHECKIN_ENTRY.shift_length_hours]:     String(payload.checkin.shift_length_hours),
+      [CHECKIN_ENTRY.hours_into_shift]:       String(payload.checkin.hours_into_shift),
+      [CHECKIN_ENTRY.caffeine_level]:         String(payload.checkin.caffeine_level),
+      [CHECKIN_ENTRY.fatigue_scale]:          String(payload.checkin.fatigue_scale),
+      [CHECKIN_ENTRY.motivation_scale]:       String(payload.checkin.motivation_scale),
+      [CHECKIN_ENTRY.symptoms]:               (payload.checkin.symptoms || []).join("|"),
+      [CHECKIN_ENTRY.age]:                    String(payload.checkin.age)
     });
 
-    // Apply cooldown immediately
     setCooldownUntilMs(SESSION.aliasHash, nowMs() + CONFIG.COOLDOWN_HOURS * 3600 * 1000);
 
-    // Reset game results
     GAME_RESULTS = { sdmt: null, nback: null, stroop: null, pvt: null };
 
-    // Move to start
     submitMsg.textContent = "Saved. Continuing to tests…";
     submitBtn.disabled = false;
 
@@ -579,51 +828,54 @@ async function main() {
     show("startSection");
   });
 
-  // Start -> show SDMT explanation
+  // Start -> SDMT explanation
   startBtn.addEventListener("click", () => {
     flowIndex = 0;
     showExplanation(flowIndex);
   });
 
-  // Begin test -> run SDMT (others placeholder for now)
+  // Begin test
   beginTestBtn.addEventListener("click", () => {
     const step = FLOW[flowIndex];
 
     if (step.key === "sdmt") {
       runSDMT({
         durationSec: 60,
+        trialTimeoutSec: 4,
         onDone: (result) => {
           GAME_RESULTS.sdmt = result;
-
-          // Next steps are placeholders for now.
           flowIndex++;
-          if (flowIndex < FLOW.length) {
-            showExplanation(flowIndex);
-          } else {
-            showResultsScreen();
-          }
+          flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
         }
       });
       return;
     }
 
-    // Placeholder for other games (for now)
+    if (step.key === "nback") {
+      runNBack({
+        rounds: 25,
+        nBack: 2,
+        onDone: (result) => {
+          GAME_RESULTS.nback = result;
+          flowIndex++;
+          flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
+        }
+      });
+      return;
+    }
+
+    // Placeholder for Stroop & PVT
     hide("explainSection");
     show("gameSection");
     document.getElementById("gameTitle").textContent = step.title;
     document.getElementById("gameUI").innerHTML = `
-      <p class="hint"><b>${step.title} not implemented yet.</b></p>
-      <p class="hint">Next we’ll build this game exactly like SDMT (60s + scoring + saved to sheet).</p>
+      <p class="hint"><b>${step.title} — coming soon.</b></p>
       <button id="nextStepBtn">Continue</button>
     `;
 
     document.getElementById("nextStepBtn").addEventListener("click", () => {
       flowIndex++;
-      if (flowIndex < FLOW.length) {
-        showExplanation(flowIndex);
-      } else {
-        showResultsScreen();
-      }
+      flowIndex < FLOW.length ? showExplanation(flowIndex) : showResultsScreen();
     });
   });
 
