@@ -111,8 +111,7 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return \
-  `${hh}:${mm}:${ss}`;
+  return `${hh}:${mm}:${ss}`;
 }
 
 function deviceInfo() {
@@ -141,7 +140,7 @@ function getTodayKeyUTC() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
     d.getUTCDate()
-  ).padStart(2, "0")}`;  
+  ).padStart(2, "0")}`;
 }
 
 function getSessionCountToday(aliasHash) {
@@ -614,7 +613,7 @@ function runStroop({ durationSec = 60, onDone }) {
   gameTitle.textContent = "Stroop Colour Task";
 
   // Build button grid
-    const btnHTML = COLOURS.map(
+  const btnHTML = COLOURS.map(
     (c) => `<button class="stroopBtn" data-colour="${c.name}"
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
@@ -1045,7 +1044,7 @@ function showResultsScreen() {
       </div>
 
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
-        <p style="margin:0 0 8px; font-weight:700;">PVT</p>
+        <p style="margin:0 0 8px; font-weight:700;'>PVT</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
           <li>Median RT: <b>${pvt ? pvt.median_rt_ms + " ms" : "—"}</b></li>
           <li>Lapses: <b>${pvt ? pvt.lapses : "—"}</b></li>
@@ -1191,7 +1190,7 @@ async function main() {
       [CHECKIN_ENTRY.app_version]:            payload.app_version,
       [CHECKIN_ENTRY.device_info]:            payload.device_info,
       [CHECKIN_ENTRY.session_number_today]:   String(payload.session_number_today),
-      [CHECKIN_ENTRY.is_first_session_today]: String(payload.session_number_today),
+      [CHECKIN_ENTRY.is_first_session_today]: String(payload.is_first_session_today),
       [CHECKIN_ENTRY.sleep_hours]:            String(payload.checkin.sleep_hours),
       [CHECKIN_ENTRY.shift_length_hours]:     String(payload.checkin.shift_length_hours),
       [CHECKIN_ENTRY.hours_into_shift]:       String(payload.checkin.hours_into_shift),
