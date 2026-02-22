@@ -111,7 +111,8 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  return \
+  `${hh}:${mm}:${ss}`;
 }
 
 function deviceInfo() {
@@ -404,8 +405,15 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     window.removeEventListener("keydown", keyHandler);
     trialTimerEl.textContent = "";
 
-    const raw = Math.max(0, correct - 0.25 * incorrect);
-    const score = Math.max(0, Math.min(100, Math.round((raw / 60) * 100)));
+    const attempts = correct + incorrect;
+    let score = null;
+    if (attempts >= 10) {
+      const clamp01 = (x) => Math.max(0, Math.min(1, x));
+      const throughput = Math.max(0, correct - 0.5 * incorrect);
+      const MIN = 5;
+      const MAX = 70;
+      score = Math.round(clamp01((throughput - MIN) / (MAX - MIN)) * 100);
+    }
 
     onDone?.({ correct, incorrect, trials, score_0_100: score });
   }
@@ -430,22 +438,22 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   gameTitle.textContent = "2-Back Task";
 
   gameUI.innerHTML = `
-    <div style="text-align:center; margin-top:20px;">
+    <div style="text-align:center; margin-top:20px;"> 
       <p class="hint">Does this letter match the one from <b>2 steps ago</b>?</p>
-      <div id="nbackStimulus" style="font-size:120px; font-weight:700; height:160px; line-height:160px; letter-spacing:2px;">
-        &nbsp;
-      </div>
+      <div id="nbackStimulus" style="font-size:120px; font-weight:700; height:160px; line-height:160px; letter-spacing:2px;"> 
+        &nbsp;  
+      </div>  
       <div id="nbackFeedback" style="min-height:28px; font-size:16px; margin-top:8px;"></div>
-      <div style="display:flex; justify-content:center; gap:24px; margin-top:20px;">
-        <button id="nbackYes" style="width:110px; height:56px; font-size:20px; background:#1a73e8; color:#fff; border:none; border-radius:10px; cursor:pointer;">YES</button>
-        <button id="nbackNo"  style="width:110px; height:56px; font-size:20px; background:#555;   color:#fff; border:none; border-radius:10px; cursor:pointer;">NO</button>
-      </div>
-      <div class="hint" style="margin-top:20px;">
-        Trial: <b id="nbackTrialNum">0</b> / ${rounds} &nbsp;|&nbsp;
-        Hits: <b id="nbackHits">0</b> &nbsp;|&nbsp;
-        Misses: <b id="nbackMisses">0</b> &nbsp;|&nbsp;
-        False alarms: <b id="nbackFA">0</b>
-      </div>
+      <div style="display:flex; justify-content:center; gap:24px; margin-top:20px;"> 
+        <button id="nbackYes" style="width:110px; height:56px; font-size:20px; background:#1a73e8; color:#fff; border:none; border-radius:10px; cursor:pointer;">YES</button> 
+        <button id="nbackNo"  style="width:110px; height:56px; font-size:20px; background:#555;   color:#fff; border:none; border-radius:10px; cursor:pointer;">NO</button>  
+      </div>  
+      <div class="hint" style="margin-top:20px;"> 
+        Trial: <b id="nbackTrialNum">0</b> / ${rounds} &nbsp;|&nbsp; 
+        Hits: <b id="nbackHits">0</b> &nbsp;|&nbsp; 
+        Misses: <b id="nbackMisses">0</b> &nbsp;|&nbsp; 
+        False alarms: <b id="nbackFA">0</b> 
+      </div>  
     </div>
   `;
 
@@ -574,7 +582,10 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
 
     const targetCount = sequence.filter((_, i) => i >= nBack && sequence[i] === sequence[i - nBack]).length;
     const rawScore = targetCount > 0 ? (hits - falseAlarms) / targetCount : 0;
-    const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    let score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    if (rounds < 20) {
+      score = null;
+    }
 
     onDone?.({ hits, misses, false_alarms: falseAlarms, score_0_100: score });
   }
@@ -608,7 +619,7 @@ function runStroop({ durationSec = 60, onDone }) {
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>`
+    </button>"
   ).join("");
 
   gameUI.innerHTML = `
@@ -699,12 +710,15 @@ function runStroop({ durationSec = 60, onDone }) {
     const total = correct + incorrect;
     const accuracy = total > 0 ? correct / total : 0;
     const medianRt = median(reactionTimes);
+    let score = null;
 
-    // Score: blend accuracy (70%) and speed (30%)
-    // Speed benchmark: 400ms = perfect, 1200ms = 0
-    const speedScore = Math.max(0, Math.min(1, (1200 - medianRt) / 800));
-    const rawScore = accuracy * 0.7 + speedScore * 0.3;
-    const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    if (total >= 10) {
+      // Score: blend accuracy (70%) and speed (30%)
+      // Speed benchmark: 400ms = perfect, 1200ms = 0
+      const speedScore = Math.max(0, Math.min(1, (1200 - medianRt) / 800));
+      const rawScore = accuracy * 0.7 + speedScore * 0.3;
+      score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    }
 
     onDone?.({ correct, incorrect, median_rt_ms: medianRt, score_0_100: score });
   }
@@ -764,6 +778,10 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
   let stimulusStart = 0;
   let waitHandle   = null;
   let ended        = false;
+  let trials = 0;
+  let respondedThisTrial = false;
+  let currentTrialLapseCounted = false;
+  let lapseTimerHandle = null;
 
   const startMs = Date.now();
 
@@ -778,24 +796,25 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
 
   function showStimulus() {
     if (ended) return;
+    trials++;
+    respondedThisTrial = false;
+    currentTrialLapseCounted = false;
     stimulusOn = true;
     stimulusStart = Date.now();
     dot.style.background = "#e53935";
     dot.style.opacity = "1";
     dot.textContent = "";
+    clearTimeout(waitHandle);
+    clearTimeout(lapseTimerHandle);
 
-    // Auto-lapse if no response within maxDelaySec ms
-    waitHandle = setTimeout(() => {
-      if (!stimulusOn || ended) return;
-      // Count as lapse
-      lapses++;
-      lapsesEl.textContent = String(lapses);
-      feedbackEl.textContent = "⏱ Too slow! (lapse)";
-      feedbackEl.style.color = "#c00";
-      reactionTimes.push(LAPSE_THRESHOLD_MS + 1); // penalise
-      hideStimulus();
-      scheduleNext();
-    }, maxDelaySec * 1000);
+    lapseTimerHandle = setTimeout(() => {
+      if (ended) return;
+      if (stimulusOn && !respondedThisTrial && !currentTrialLapseCounted) {
+        lapses++;
+        currentTrialLapseCounted = true;
+        lapsesEl.textContent = String(lapses);
+      }
+    }, LAPSE_THRESHOLD_MS);
   }
 
   function hideStimulus() {
@@ -804,6 +823,7 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     dot.style.opacity = "0.25";
     dot.textContent = "";
     clearTimeout(waitHandle);
+    clearTimeout(lapseTimerHandle);
   }
 
   function scheduleNext() {
@@ -825,7 +845,8 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     }
 
     // Valid response
-    clearTimeout(waitHandle);
+    respondedThisTrial = true;
+    clearTimeout(lapseTimerHandle);
     const rt = Date.now() - stimulusStart;
     reactionTimes.push(rt);
     const responses = reactionTimes.length;
@@ -833,8 +854,11 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     lastRtEl.textContent = rt + " ms";
 
     if (rt >= LAPSE_THRESHOLD_MS) {
-      lapses++;
-      lapsesEl.textContent = String(lapses);
+      if (!currentTrialLapseCounted) {
+        lapses++;
+        currentTrialLapseCounted = true;
+        lapsesEl.textContent = String(lapses);
+      }
       feedbackEl.textContent = `⚠ Slow: ${rt} ms (lapse)`;
       feedbackEl.style.color = "#c00";
     } else {
@@ -854,19 +878,23 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     ended = true;
     clearInterval(timerInt);
     clearTimeout(waitHandle);
+    clearTimeout(lapseTimerHandle);
     hideStimulus();
 
-    const validRTs = reactionTimes.filter((rt) => rt < LAPSE_THRESHOLD_MS);
-    const medianRt = validRTs.length > 0 ? median(validRTs) : LAPSE_THRESHOLD_MS;
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+    const clamp0to100 = (x) => Math.max(0, Math.min(100, x));
+    const medianRt = median(reactionTimes);
+    const lapseRate = trials > 0 ? lapses / trials : 0;
+    const fsRate = trials > 0 ? falseStarts / trials : 0;
+    const speedScore = clamp01((700 - medianRt) / (700 - 200));
+    const lapsePenalty = clamp01(lapseRate * 1.2);
+    const fsPenalty = clamp01(fsRate * 0.4);
+    const rawScore = speedScore * (1 - clamp01(lapsePenalty + fsPenalty));
+    let score = clamp0to100(Math.round(rawScore * 100));
 
-    // Score: median RT benchmark 150ms = 100, 500ms = 0; penalise lapses & false starts
-    const speedScore = Math.max(0, Math.min(1, (500 - medianRt) / 350));
-    const totalTrials = reactionTimes.length;
-    const lapseRate   = totalTrials > 0 ? lapses / totalTrials : 0;
-    const fsRate      = totalTrials > 0 ? falseStarts / totalTrials : 0;
-    const penalty     = Math.min(1, lapseRate * 1.5 + fsRate * 0.5);
-    const rawScore    = speedScore * (1 - penalty);
-    const score       = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    if (trials < 8) {
+      score = null;
+    }
 
     onDone?.({ median_rt_ms: medianRt, lapses, false_starts: falseStarts, score_0_100: score });
   }
@@ -876,8 +904,8 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
 // Scoring helpers
 // ===============================
 function computeOverall(results) {
-  // Weighted average: SDMT 25%, NBack 25%, Stroop 25%, PVT 25%
-  const weights = { sdmt: 0.25, nback: 0.25, stroop: 0.25, pvt: 0.25 };
+  // Weighted average: SDMT 25%, NBack 15%, Stroop 25%, PVT 35%
+  const weights = { pvt: 0.35, sdmt: 0.25, stroop: 0.25, nback: 0.15 };
   let total = 0;
   let wSum  = 0;
   for (const [key, w] of Object.entries(weights)) {
@@ -954,22 +982,22 @@ function showResultsScreen() {
 
     [RESULTS_ENTRY.sdmt_correct]:     String(sdmt   ? sdmt.correct       : ""),
     [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt   ? sdmt.incorrect     : ""),
-    [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt   ? sdmt.score_0_100   : ""),
+    [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt?.score_0_100 ?? ""),
 
     [RESULTS_ENTRY.nback_hits]:         String(nback  ? nback.hits          : ""),
     [RESULTS_ENTRY.nback_misses]:       String(nback  ? nback.misses        : ""),
     [RESULTS_ENTRY.nback_false_alarms]: String(nback  ? nback.false_alarms  : ""),
-    [RESULTS_ENTRY.nback_score_0_100]:  String(nback  ? nback.score_0_100   : ""),
+    [RESULTS_ENTRY.nback_score_0_100]:  String(nback?.score_0_100 ?? ""),
 
     [RESULTS_ENTRY.stroop_correct]:      String(stroop ? stroop.correct      : ""),
     [RESULTS_ENTRY.stroop_incorrect]:    String(stroop ? stroop.incorrect    : ""),
     [RESULTS_ENTRY.stroop_median_rt_ms]: String(stroop ? stroop.median_rt_ms : ""),
-    [RESULTS_ENTRY.stroop_score_0_100]:  String(stroop ? stroop.score_0_100  : ""),
+    [RESULTS_ENTRY.stroop_score_0_100]:  String(stroop?.score_0_100 ?? ""),
 
     [RESULTS_ENTRY.pvt_median_rt_ms]: String(pvt    ? pvt.median_rt_ms    : ""),
     [RESULTS_ENTRY.pvt_lapses]:       String(pvt    ? pvt.lapses           : ""),
     [RESULTS_ENTRY.pvt_false_starts]: String(pvt    ? pvt.false_starts     : ""),
-    [RESULTS_ENTRY.pvt_score_0_100]:  String(pvt    ? pvt.score_0_100      : ""),
+    [RESULTS_ENTRY.pvt_score_0_100]:  String(pvt?.score_0_100 ?? ""),
 
     [RESULTS_ENTRY.overall_score_0_100]: String(overallScore),
     [RESULTS_ENTRY.overall_band]:        band,
