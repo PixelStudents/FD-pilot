@@ -612,13 +612,12 @@ function runStroop({ durationSec = 60, onDone }) {
 
   gameTitle.textContent = "Stroop Colour Task";
 
-  // Build button grid
   const btnHTML = COLOURS.map(
     (c) => `<button class="stroopBtn" data-colour="${c.name}"
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>
+    </button>`
   ).join("");
 
   gameUI.innerHTML = `
