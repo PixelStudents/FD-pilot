@@ -38,19 +38,19 @@
         <h2>Check-in</h2>
 
         <div class="grid">
-          <label>Sleep (hours)
+          <label>How many hours did you sleep last night? (hours)
             <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
           </label>
 
-          <label>Shift length (hours)
+          <label>How long is your shift today? (hours)
             <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
           </label>
 
-          <label>Hours into shift
+          <label>How many hours into your shift are you right now?
             <input id="hoursInto" type="number" min="0" max="24" step="0.5" />
           </label>
 
-          <label>Caffeine
+          <label>How much caffeine have you had in the last 4 hours?
             <select id="caffeine">
               <option value="">Select…</option>
               <option value="none">None</option>
@@ -60,26 +60,31 @@
             </select>
           </label>
 
-          <label>Fatigue (0–10)
+          <label>How fatigued do you feel right now? (0–10) (0=not at all, 10=extremely)
             <input id="fatigue" type="number" min="0" max="10" step="1" />
           </label>
 
-          <label>Motivation (0–10)
+          <label>How motivated/alert do you feel right now? (0–10) (0=not at all, 10=extremely)
             <input id="motivation" type="number" min="0" max="10" step="1" />
           </label>
 
-          <label>Age
+          <label>Age (years) — asked once
             <input id="age" type="number" min="16" max="90" step="1" />
           </label>
         </div>
 
         <fieldset class="fieldset">
-          <legend>Symptoms (tick any)</legend>
+          <legend>Any symptoms right now? (tick any)</legend>
           <label><input class="symptom" type="checkbox" value="fatigue" /> Fatigue</label>
           <label><input class="symptom" type="checkbox" value="headache" /> Headache</label>
-          <label><input class="symptom" type="checkbox" value="brain_fog" /> Brain fog</label>
+          <label><input class="symptom" type="checkbox" value="brain_fog" /> Brain fog / difficulty concentrating</label>
+          <label><input class="symptom" type="checkbox" value="slower_thinking" /> Slower thinking / sluggish</label>
           <label><input class="symptom" type="checkbox" value="irritable" /> Irritable</label>
-          <label><input class="symptom" type="checkbox" value="drowsy" /> Drowsy</label>
+          <label><input class="symptom" type="checkbox" value="drowsy" /> Sleepy / drowsy</label>
+          <label><input class="symptom" type="checkbox" value="heavy_eyelids" /> Heavy eyelids / eye strain</label>
+          <label><input class="symptom" type="checkbox" value="yawning" /> Yawning frequently</label>
+          <label><input class="symptom" type="checkbox" value="reduced_motivation" /> Reduced motivation</label>
+          <label><input class="symptom" type="checkbox" value="clumsy_coordination" /> Clumsy / poor coordination</label>
         </fieldset>
 
         <button id="submitCheckinBtn">Submit check-in</button>
