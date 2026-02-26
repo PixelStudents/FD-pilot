@@ -213,7 +213,8 @@ let SESSION = {
   aliasHash: "",
   sessionId: "",
   sessionNumberToday: 0,
-  isFirstToday: false
+  isFirstToday: false,
+  symptoms: []
 };
 
 let GAME_RESULTS = {
@@ -407,11 +408,19 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     const attempts = correct + incorrect;
     let score = null;
     if (attempts >= 10) {
-      const clamp01 = (x) => Math.max(0, Math.min(1, x));
-      const throughput = Math.max(0, correct - 0.5 * incorrect);
-      const MIN = 5;
-      const MAX = 70;
-      score = Math.round(clamp01((throughput - MIN) / (MAX - MIN)) * 100);
+      const clamp0to100 = (x) => Math.max(0, Math.min(100, x));
+      const effective = correct - 0.25 * incorrect;
+      let mappedScore = 0;
+      if (effective <= 20) {
+        mappedScore = 0;
+      } else if (effective >= 50) {
+        mappedScore = 100;
+      } else if (effective <= 39) {
+        mappedScore = ((effective - 20) / (39 - 20)) * 75;
+      } else {
+        mappedScore = 75 + ((effective - 39) / (50 - 39)) * 25;
+      }
+      score = clamp0to100(Math.round(mappedScore));
     }
 
     onDone?.({ correct, incorrect, trials, score_0_100: score });
@@ -617,7 +626,7 @@ function runStroop({ durationSec = 60, onDone }) {
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>`
+    </button>"
   ).join("");
 
   gameUI.innerHTML = `
@@ -901,6 +910,26 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
 // ===============================
 // Scoring helpers
 // ===============================
+function symptomPenalty(symptoms) {
+  const weights = {
+    drowsy: 3,
+    brain_fog: 3,
+    microsleeps: 3,
+    slower_thinking: 3,
+    clumsy_coordination: 3,
+    yawning: 2,
+    heavy_eyelids: 2,
+    reduced_motivation: 2,
+    irritable: 2,
+    headache: 1,
+    dizziness: 1,
+    stress: 1,
+    low_mood: 1
+  };
+  const total = (symptoms || []).reduce((sum, symptom) => sum + (weights[symptom] || 0), 0);
+  return Math.max(0, Math.min(12, total));
+}
+
 function computeOverall(results) {
   // Weighted average: SDMT 25%, NBack 15%, Stroop 25%, PVT 35%
   const weights = { pvt: 0.35, sdmt: 0.25, stroop: 0.25, nback: 0.15 };
@@ -966,7 +995,9 @@ function showResultsScreen() {
   const stroop = GAME_RESULTS.stroop;
   const pvt    = GAME_RESULTS.pvt;
 
-  const overallScore = computeOverall(GAME_RESULTS);
+  const overallScoreRaw = computeOverall(GAME_RESULTS);
+  const symptomPenaltyScore = symptomPenalty(SESSION.symptoms);
+  const overallScore = Math.max(0, Math.min(100, overallScoreRaw - symptomPenaltyScore));
   const band         = scoreToBand(overallScore);
   const advice       = scoreToAdvice(overallScore, band);
   const bColour      = bandColour(band);
@@ -1043,7 +1074,7 @@ function showResultsScreen() {
       </div>
 
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
-        <p style="margin:0 0 8px; font-weight:700;'>PVT</p>
+        <p style="margin:0 0 8px; font-weight:700;">PVT</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
           <li>Median RT: <b>${pvt ? pvt.median_rt_ms + " ms" : "—"}</b></li>
           <li>Lapses: <b>${pvt ? pvt.lapses : "—"}</b></li>
@@ -1180,6 +1211,8 @@ async function main() {
       }
     };
 
+    SESSION.symptoms = payload.checkin.symptoms;
+
     localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
 
     submitHiddenForm(FORM_CHECKIN_URL, {
@@ -1189,7 +1222,7 @@ async function main() {
       [CHECKIN_ENTRY.app_version]:            payload.app_version,
       [CHECKIN_ENTRY.device_info]:            payload.device_info,
       [CHECKIN_ENTRY.session_number_today]:   String(payload.session_number_today),
-      [CHECKIN_ENTRY.is_first_session_today]: String(payload.is_first_session_today),
+      [CHECKIN_ENTRY.is_first_session_today]: String(payload.session_number_today),
       [CHECKIN_ENTRY.sleep_hours]:            String(payload.checkin.sleep_hours),
       [CHECKIN_ENTRY.shift_length_hours]:     String(payload.checkin.shift_length_hours),
       [CHECKIN_ENTRY.hours_into_shift]:       String(payload.checkin.hours_into_shift),
