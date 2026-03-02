@@ -138,7 +138,7 @@ function median(arr) {
 // --------------------
 function getTodayKeyUTC() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")} -${String(
     d.getUTCDate()
   ).padStart(2, "0")}`;
 }
@@ -626,8 +626,8 @@ function runStroop({ durationSec = 60, onDone }) {
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>'
-  ).join("");
+    </button>"
+    ).join("");
 
   gameUI.innerHTML = `
     <p class="hint" style="text-align:center;">Tap the button matching the <b>ink colour</b> — ignore the word.</p>
@@ -1009,26 +1009,26 @@ function showResultsScreen() {
     [RESULTS_ENTRY.session_id]:    SESSION.sessionId,
     [RESULTS_ENTRY.alias_hash]:    SESSION.aliasHash,
     [RESULTS_ENTRY.app_version]:   CONFIG.APP_VERSION,
-
+  
     [RESULTS_ENTRY.sdmt_correct]:     String(sdmt   ? sdmt.correct       : ""),
     [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt   ? sdmt.incorrect     : ""),
     [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt?.score_0_100 ?? ""),
-
+  
     [RESULTS_ENTRY.nback_hits]:         String(nback  ? nback.hits          : ""),
     [RESULTS_ENTRY.nback_misses]:       String(nback  ? nback.misses        : ""),
     [RESULTS_ENTRY.nback_false_alarms]: String(nback  ? nback.false_alarms  : ""),
     [RESULTS_ENTRY.nback_score_0_100]:  String(nback?.score_0_100 ?? ""),
-
+  
     [RESULTS_ENTRY.stroop_correct]:      String(stroop ? stroop.correct      : ""),
     [RESULTS_ENTRY.stroop_incorrect]:    String(stroop ? stroop.incorrect    : ""),
     [RESULTS_ENTRY.stroop_median_rt_ms]: String(stroop ? stroop.median_rt_ms : ""),
     [RESULTS_ENTRY.stroop_score_0_100]:  String(stroop?.score_0_100 ?? ""),
-
+  
     [RESULTS_ENTRY.pvt_median_rt_ms]: String(pvt    ? pvt.median_rt_ms    : ""),
     [RESULTS_ENTRY.pvt_lapses]:       String(pvt    ? pvt.lapses           : ""),
     [RESULTS_ENTRY.pvt_false_starts]: String(pvt    ? pvt.false_starts     : ""),
     [RESULTS_ENTRY.pvt_score_0_100]:  String(pvt?.score_0_100 ?? ""),
-
+  
     [RESULTS_ENTRY.overall_score_0_100]: String(overallScore),
     [RESULTS_ENTRY.overall_band]:        band,
     [RESULTS_ENTRY.advice_text]:         advice
