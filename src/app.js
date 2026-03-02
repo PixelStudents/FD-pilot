@@ -626,7 +626,7 @@ function runStroop({ durationSec = 60, onDone }) {
       style="width:120px; height:54px; font-size:18px; font-weight:700;
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
-    </button>`
+    </button>'
   ).join("");
 
   gameUI.innerHTML = `
@@ -641,7 +641,8 @@ function runStroop({ durationSec = 60, onDone }) {
     <div class="hint" style="text-align:center; margin-top:16px;">
       Correct: <b id="stroopCorrect">0</b> &nbsp;|&nbsp; Incorrect: <b id="stroopIncorrect">0</b>
     </div>
-  `;
+  </div>
+`;
 
   const wordEl      = document.getElementById("stroopWord");
   const feedbackEl  = document.getElementById("stroopFeedback");
