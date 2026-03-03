@@ -111,7 +111,7 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  return \\`\${hh}:${mm}:${ss}\`;
 }
 
 function deviceInfo() {
@@ -125,7 +125,6 @@ function uuidv4() {
 function selectedSymptoms() {
   return Array.from(document.querySelectorAll(".symptom:checked")).map((x) => x.value);
 }
-
 function median(arr) {
   if (!arr || arr.length === 0) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
@@ -138,38 +137,36 @@ function median(arr) {
 // --------------------
 function getTodayKeyUTC() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")} -${String(
-    d.getUTCDate()
-  ).padStart(2, "0")}`;
+  return \\`\${d.getUTCFullYear()}-\${String(d.getUTCMonth() + 1).padStart(2, "0")} -\${String(d.getUTCDate()).padStart(2, "0")}\`;
 }
 
 function getSessionCountToday(aliasHash) {
-  return Number(localStorage.getItem(`sessions_${aliasHash}_${getTodayKeyUTC()}`) || "0");
+  return Number(localStorage.getItem(\`sessions_\${aliasHash}_\${getTodayKeyUTC()}\`) || "0");
 }
 
 function incrementSessionCountToday(aliasHash) {
-  const key = `sessions_${aliasHash}_${getTodayKeyUTC()}`;
+  const key = \\`\sessions_\${aliasHash}_\${getTodayKeyUTC()}\`;
   const n = getSessionCountToday(aliasHash) + 1;
   localStorage.setItem(key, String(n));
   return n;
 }
 
 function getCooldownUntilMs(aliasHash) {
-  const v = localStorage.getItem(`cooldown_until_${aliasHash}`);
+  const v = localStorage.getItem(\`cooldown_until_\${aliasHash}\`);
   return v ? Number(v) : 0;
 }
 
 function setCooldownUntilMs(aliasHash, untilMs) {
-  localStorage.setItem(`cooldown_until_${aliasHash}`, String(untilMs));
+  localStorage.setItem(\`cooldown_until_\${aliasHash}\`, String(untilMs));
 }
 
 function cacheAgeIfProvided(aliasHash, ageVal) {
   if (!ageVal) return;
-  localStorage.setItem(`age_${aliasHash}`, String(ageVal));
+  localStorage.setItem(\`age_\${aliasHash}\`, String(ageVal));
 }
 
 function getCachedAge(aliasHash) {
-  const v = localStorage.getItem(`age_${aliasHash}`);
+  const v = localStorage.getItem(\`age_\${aliasHash}\`);
   return v ? Number(v) : null;
 }
 
@@ -307,7 +304,7 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     <div id="sdmtFeedback" style="text-align:center; min-height:22px; font-size:15px; margin-top:6px;"></div>
     <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
       ${[1,2,3,4,5,6,7,8,9]
-        .map((n) => `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px; font-size:18px;">${n}</button>`)
+        .map((n) => `<button class="sdmtBtn" data-n="${n}" style="width:64px; height:46px; font-size:18px;">${n}</button>`) 
         .join("")}
     </div>
     <div class="hint" style="text-align:center; margin-top:14px;">
@@ -627,7 +624,7 @@ function runStroop({ durationSec = 60, onDone }) {
              background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
       ${c.name}
     </button>"
-    ).join("");
+  ).join("");
 
   gameUI.innerHTML = `
     <p class="hint" style="text-align:center;">Tap the button matching the <b>ink colour</b> — ignore the word.</p>
@@ -981,7 +978,7 @@ function showExplanation(i) {
   show("explainSection");
 
   const step = FLOW[i];
-  document.getElementById("explainTitle").textContent = `${step.title} – Instructions`;
+  document.getElementById("explainTitle").textContent = \\`\${step.title} – Instructions\`;
   document.getElementById("explainText").textContent = step.text;
 }
 
@@ -1009,26 +1006,26 @@ function showResultsScreen() {
     [RESULTS_ENTRY.session_id]:    SESSION.sessionId,
     [RESULTS_ENTRY.alias_hash]:    SESSION.aliasHash,
     [RESULTS_ENTRY.app_version]:   CONFIG.APP_VERSION,
-  
+
     [RESULTS_ENTRY.sdmt_correct]:     String(sdmt   ? sdmt.correct       : ""),
     [RESULTS_ENTRY.sdmt_incorrect]:   String(sdmt   ? sdmt.incorrect     : ""),
     [RESULTS_ENTRY.sdmt_score_0_100]: String(sdmt?.score_0_100 ?? ""),
-  
+
     [RESULTS_ENTRY.nback_hits]:         String(nback  ? nback.hits          : ""),
     [RESULTS_ENTRY.nback_misses]:       String(nback  ? nback.misses        : ""),
     [RESULTS_ENTRY.nback_false_alarms]: String(nback  ? nback.false_alarms  : ""),
     [RESULTS_ENTRY.nback_score_0_100]:  String(nback?.score_0_100 ?? ""),
-  
+
     [RESULTS_ENTRY.stroop_correct]:      String(stroop ? stroop.correct      : ""),
     [RESULTS_ENTRY.stroop_incorrect]:    String(stroop ? stroop.incorrect    : ""),
     [RESULTS_ENTRY.stroop_median_rt_ms]: String(stroop ? stroop.median_rt_ms : ""),
     [RESULTS_ENTRY.stroop_score_0_100]:  String(stroop?.score_0_100 ?? ""),
-  
+
     [RESULTS_ENTRY.pvt_median_rt_ms]: String(pvt    ? pvt.median_rt_ms    : ""),
     [RESULTS_ENTRY.pvt_lapses]:       String(pvt    ? pvt.lapses           : ""),
     [RESULTS_ENTRY.pvt_false_starts]: String(pvt    ? pvt.false_starts     : ""),
     [RESULTS_ENTRY.pvt_score_0_100]:  String(pvt?.score_0_100 ?? ""),
-  
+
     [RESULTS_ENTRY.overall_score_0_100]: String(overallScore),
     [RESULTS_ENTRY.overall_band]:        band,
     [RESULTS_ENTRY.advice_text]:         advice
@@ -1036,9 +1033,9 @@ function showResultsScreen() {
 
   document.getElementById("resultsSummary").innerHTML = `
     <div style="text-align:center; padding:16px 0 8px;">
-      <div style="font-size:64px; font-weight:900; color:${bColour};">${overallScore}</div>
-      <div style="font-size:22px; font-weight:700; color:${bColour}; margin-top:4px;">${band}</div>
-      <p style="max-width:480px; margin:12px auto 0; font-size:15px; line-height:1.55; color:#333;">${advice}</p>
+      <div style="font-size:64px; font-weight:900; color:${bColour};">\${overallScore}</div>
+      <div style="font-size:22px; font-weight:700; color:${bColour}; margin-top:4px;">\${band}</div>
+      <p style="max-width:480px; margin:12px auto 0; font-size:15px; line-height:1.55; color:#333;">\${advice}</p>
     </div>
 
     <hr style="margin:20px 0; border:none; border-top:1px solid #e0e0e0;" />
@@ -1048,46 +1045,46 @@ function showResultsScreen() {
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
         <p style="margin:0 0 8px; font-weight:700;">SDMT</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
-          <li>Correct: <b>${sdmt ? sdmt.correct : "—"}</b></li>
-          <li>Incorrect: <b>${sdmt ? sdmt.incorrect : "—"}</b></li>
-          <li>Score: <b>${sdmt ? sdmt.score_0_100 : "—"} / 100</b></li>
+          <li>Correct: <b>\${sdmt ? sdmt.correct : "—"}</b></li>
+          <li>Incorrect: <b>\${sdmt ? sdmt.incorrect : "—"}</b></li>
+          <li>Score: <b>\${sdmt ? sdmt.score_0_100 : "—"} / 100</b></li>
         </ul>
       </div>
 
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
         <p style="margin:0 0 8px; font-weight:700;">2-Back</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
-          <li>Hits: <b>${nback ? nback.hits : "—"}</b></li>
-          <li>Misses: <b>${nback ? nback.misses : "—"}</b></li>
-          <li>False alarms: <b>${nback ? nback.false_alarms : "—"}</b></li>
-          <li>Score: <b>${nback ? nback.score_0_100 : "—"} / 100</b></li>
+          <li>Hits: <b>\${nback ? nback.hits : "—"}</b></li>
+          <li>Misses: <b>\${nback ? nback.misses : "—"}</b></li>
+          <li>False alarms: <b>\${nback ? nback.false_alarms : "—"}</b></li>
+          <li>Score: <b>\${nback ? nback.score_0_100 : "—"} / 100</b></li>
         </ul>
       </div>
 
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
         <p style="margin:0 0 8px; font-weight:700;">Stroop</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
-          <li>Correct: <b>${stroop ? stroop.correct : "—"}</b></li>
-          <li>Incorrect: <b>${stroop ? stroop.incorrect : "—"}</b></li>
-          <li>Median RT: <b>${stroop ? stroop.median_rt_ms + " ms" : "—"}</b></li>
-          <li>Score: <b>${stroop ? stroop.score_0_100 : "—"} / 100</b></li>
+          <li>Correct: <b>\${stroop ? stroop.correct : "—"}</b></li>
+          <li>Incorrect: <b>\${stroop ? stroop.incorrect : "—"}</b></li>
+          <li>Median RT: <b>\${stroop ? stroop.median_rt_ms + " ms" : "—"}</b></li>
+          <li>Score: <b>\${stroop ? stroop.score_0_100 : "—"} / 100</b></li>
         </ul>
       </div>
 
       <div style="background:#f9f9f9; border-radius:10px; padding:14px;">
         <p style="margin:0 0 8px; font-weight:700;">PVT</p>
         <ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;">
-          <li>Median RT: <b>${pvt ? pvt.median_rt_ms + " ms" : "—"}</b></li>
-          <li>Lapses: <b>${pvt ? pvt.lapses : "—"}</b></li>
-          <li>False starts: <b>${pvt ? pvt.false_starts : "—"}</b></li>
-          <li>Score: <b>${pvt ? pvt.score_0_100 : "—"} / 100</b></li>
+          <li>Median RT: <b>\${pvt ? pvt.median_rt_ms + " ms" : "—"}</b></li>
+          <li>Lapses: <b>\${pvt ? pvt.lapses : "—"}</b></li>
+          <li>False starts: <b>\${pvt ? pvt.false_starts : "—"}</b></li>
+          <li>Score: <b>\${pvt ? pvt.score_0_100 : "—"} / 100</b></li>
         </ul>
       </div>
 
     </div>
 
     <p class="hint" style="text-align:center; margin-top:16px;">
-      Results submitted to Google Sheets. &nbsp; Session ID: ${SESSION.sessionId}
+      Results submitted to Google Sheets. &nbsp; Session ID: \${SESSION.sessionId}
     </p>
   `;
 }
@@ -1128,7 +1125,7 @@ async function main() {
       return;
     }
 
-    const salted = `${CONFIG.HASHING.salt}::${alias}`;
+    const salted = \\`\${CONFIG.HASHING.salt}::\${alias}\`;
     const aliasHash = await sha256Hex(salted);
 
     SESSION.alias = alias;
@@ -1214,7 +1211,7 @@ async function main() {
 
     SESSION.symptoms = payload.checkin.symptoms;
 
-    localStorage.setItem(`session_${payload.session_id}`, JSON.stringify(payload));
+    localStorage.setItem(\`session_\${payload.session_id}\`, JSON.stringify(payload));
 
     submitHiddenForm(FORM_CHECKIN_URL, {
       [CHECKIN_ENTRY.timestamp_utc]:          payload.timestamp_utc,
