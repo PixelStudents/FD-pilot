@@ -159,32 +159,32 @@ function getTodayKeyUTC() {
 }
 
 function getSessionCountToday(aliasHash) {
-  return Number(localStorage.getItem(\`sessions_\${aliasHash}_\${getTodayKeyUTC()}\`) || "0");
+  return Number(localStorage.getItem(`sessions_${aliasHash}_${getTodayKeyUTC()}`) || "0");
 }
 
 function incrementSessionCountToday(aliasHash) {
-  const key = \\`\sessions_\${aliasHash}_\${getTodayKeyUTC()}\`;
+  const key = `\sessions_${aliasHash}_${getTodayKeyUTC()}`;
   const n = getSessionCountToday(aliasHash) + 1;
   localStorage.setItem(key, String(n));
   return n;
 }
 
 function getCooldownUntilMs(aliasHash) {
-  const v = localStorage.getItem(\`cooldown_until_\${aliasHash}\`);
+  const v = localStorage.getItem(`cooldown_until_${aliasHash}`);
   return v ? Number(v) : 0;
 }
 
 function setCooldownUntilMs(aliasHash, untilMs) {
-  localStorage.setItem(\`cooldown_until_\${aliasHash}\`, String(untilMs));
+  localStorage.setItem(`cooldown_until_${aliasHash}`, String(untilMs));
 }
 
 function cacheAgeIfProvided(aliasHash, ageVal) {
   if (!ageVal) return;
-  localStorage.setItem(\`age_\${aliasHash}\`, String(ageVal));
+  localStorage.setItem(`age_${aliasHash}`, String(ageVal));
 }
 
 function getCachedAge(aliasHash) {
-  const v = localStorage.getItem(\`age_\${aliasHash}\`);
+  const v = localStorage.getItem(`age_${aliasHash}`);
   return v ? Number(v) : null;
 }
 
