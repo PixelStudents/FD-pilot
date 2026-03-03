@@ -111,14 +111,18 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  return hh + ":" + mm + ":" + ss;
 }
 
 function getTodayKeyUTC() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
-    d.getUTCDate()
-  ).padStart(2, "0")}`;
+  return (
+    d.getUTCFullYear() +
+    "-" +
+    String(d.getUTCMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(d.getUTCDate()).padStart(2, "0")
+  );
 }
 
 function incrementSessionCountToday(aliasHash) {
