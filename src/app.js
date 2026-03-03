@@ -358,7 +358,6 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
       <div id="nbackFeedback" style="min-height:28px;font-size:16px;margin-top:8px;"></div>
       <div style="display:flex;justify-content:center;gap:24px;margin-top:20px;">
         <button id="nbackYes" style="width:110px;height:56px;font-size:20px;background:#1a73e8;color:#fff;border:none;border-radius:10px;cursor:pointer;">YES</button>
-        <button id="nbackNo"  style="width:110px;height:56px;font-size:20px;background:#555;color:#fff;border:none;border-radius:10px;cursor:pointer;">NO</button>
       </div>
       <div class="hint" style="margin-top:20px;">
         Trial: <b id="nbackTrialNum">0</b> / ${rounds} &nbsp;|&nbsp;
@@ -375,7 +374,6 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   const missesEl = document.getElementById("nbackMisses");
   const faEl = document.getElementById("nbackFA");
   const yesBtn = document.getElementById("nbackYes");
-  const noBtn  = document.getElementById("nbackNo");
 
   const sequence = [];
   for (let i = 0; i < rounds; i++) {
@@ -392,8 +390,8 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   let responded = false, isTarget = false, displayTimer = null, isiTimer = null, ended = false;
 
   function setButtons(enabled) {
-    yesBtn.disabled = !enabled; noBtn.disabled = !enabled;
-    yesBtn.style.opacity = enabled ? "1" : "0.4"; noBtn.style.opacity = enabled ? "1" : "0.4";
+    yesBtn.disabled = !enabled;
+    yesBtn.style.opacity = enabled ? "1" : "0.4";
   }
   function showFeedback(text, color) { feedbackEl.textContent = text; feedbackEl.style.color = color; }
 
@@ -429,8 +427,7 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
   }
 
   yesBtn.addEventListener("click", () => handleResponse(true));
-  noBtn.addEventListener("click",  () => handleResponse(false));
-  function keyHandler(e) { if (e.key.toLowerCase() === "y") handleResponse(true); if (e.key.toLowerCase() === "n") handleResponse(false); }
+  function keyHandler(e) { if (e.key.toLowerCase() === "y") handleResponse(true);}
   window.addEventListener("keydown", keyHandler);
 
   function finish() {
