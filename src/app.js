@@ -163,7 +163,7 @@ function getSessionCountToday(aliasHash) {
 }
 
 function incrementSessionCountToday(aliasHash) {
-  const key = `\sessions_${aliasHash}_${getTodayKeyUTC()}`;
+  const key = `sessions_${aliasHash}_${getTodayKeyUTC()}`;
   const n = getSessionCountToday(aliasHash) + 1;
   localStorage.setItem(key, String(n));
   return n;
