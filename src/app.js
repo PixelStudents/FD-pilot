@@ -1,3 +1,5 @@
+vascript
+
 // ===============================
 // FORM 1: CHECK-IN
 // ===============================
@@ -111,8 +113,7 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return
-    `${hh}:${mm}:${ss}`;
+  return `${hh}:${mm}:${ss}`;
 }
 
 function deviceInfo() {
@@ -213,7 +214,10 @@ let SESSION = {
   sessionId: "",
   sessionNumberToday: 0,
   isFirstToday: false,
-  symptoms: []
+  symptoms: [],
+  // Check-in values stored for scoring
+  sleepHours: null,
+  hoursIntoShift: null
 };
 
 let GAME_RESULTS = {
@@ -253,6 +257,7 @@ let flowIndex = 0;
 
 // ===============================
 // SDMT Game
+// CHANGE 1: Updated piecewise curve for more even discrimination
 // ===============================
 function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
   const SYMBOLS = ["▭", "◯", "∧", "⊕", "≡", "⇔", "◄", "∴", "Ψ"];
@@ -409,15 +414,18 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     if (attempts >= 10) {
       const clamp0to100 = (x) => Math.max(0, Math.min(100, x));
       const effective = correct - 0.25 * incorrect;
+
+      // CHANGE 1: Updated piecewise curve — spreads discrimination more evenly
+      // across the range where fatigued individuals actually score.
       let mappedScore = 0;
-      if (effective <= 20) {
+      if (effective <= 15) {
         mappedScore = 0;
-      } else if (effective >= 50) {
-        mappedScore = 100;
-      } else if (effective <= 39) {
-        mappedScore = ((effective - 20) / (39 - 20)) * 75;
+      } else if (effective <= 35) {
+        mappedScore = ((effective - 15) / 20) * 60;
+      } else if (effective <= 45) {
+        mappedScore = 60 + ((effective - 35) / 10) * 25;
       } else {
-        mappedScore = 75 + ((effective - 39) / (50 - 39)) * 25;
+        mappedScore = 85 + ((effective - 45) / 5) * 15;
       }
       score = clamp0to100(Math.round(mappedScore));
     }
@@ -427,7 +435,7 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
 }
 
 // ===============================
-// 2-Back Game
+// 2-Back Game — unchanged
 // ===============================
 function runNBack({ rounds = 25, nBack = 2, onDone }) {
   const LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("");
@@ -602,6 +610,8 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
 
 // ===============================
 // Stroop Game
+// CHANGE 4: Interference effect (congruent vs incongruent accuracy split)
+// added to internal scoring only. UI, trial generation, and timing unchanged.
 // ===============================
 function runStroop({ durationSec = 60, onDone }) {
   const COLOURS = [
@@ -652,15 +662,24 @@ function runStroop({ durationSec = 60, onDone }) {
   const reactionTimes = [];
   let trialStart = 0;
   let currentInkColour = "";
+  let currentIsCongruent = false; // CHANGE 4: track trial type
   let ended = false;
+
+  // CHANGE 4: separate congruent / incongruent counters
+  let congruentCorrect = 0;
+  let congruentIncorrect = 0;
+  let incongruentCorrect = 0;
+  let incongruentIncorrect = 0;
 
   function nextTrial() {
     const wordIdx = Math.floor(Math.random() * COLOURS.length);
     let inkIdx;
     if (Math.random() < 0.6) {
       do { inkIdx = Math.floor(Math.random() * COLOURS.length); } while (inkIdx === wordIdx);
+      currentIsCongruent = false; // incongruent
     } else {
       inkIdx = wordIdx;
+      currentIsCongruent = true; // congruent
     }
     const word      = COLOURS[wordIdx].name;
     const inkColour = COLOURS[inkIdx];
@@ -693,11 +712,23 @@ function runStroop({ durationSec = 60, onDone }) {
       feedbackEl.textContent = "✓ Correct";
       feedbackEl.style.color = "#080";
       correctEl.textContent = String(correct);
+      // CHANGE 4: record by trial type
+      if (currentIsCongruent) {
+        congruentCorrect++;
+      } else {
+        incongruentCorrect++;
+      }
     } else {
       incorrect++;
       feedbackEl.textContent = `✗ Wrong — it was ${currentInkColour}`;
       feedbackEl.style.color = "#c00";
       incorrectEl.textContent = String(incorrect);
+      // CHANGE 4: record by trial type
+      if (currentIsCongruent) {
+        congruentIncorrect++;
+      } else {
+        incongruentIncorrect++;
+      }
     }
     nextTrial();
     setTimeout(() => { if (!ended) feedbackEl.style.color = ""; }, 500);
@@ -712,13 +743,26 @@ function runStroop({ durationSec = 60, onDone }) {
     clearInterval(timerInt);
 
     const total = correct + incorrect;
-    const accuracy = total > 0 ? correct / total : 0;
     const medianRt = median(reactionTimes);
     let score = null;
 
     if (total >= 10) {
+      // Overall accuracy (unchanged)
+      const overallAccuracy = total > 0 ? correct / total : 0;
+
+      // CHANGE 4: interference effect calculation
+      const congTotal = congruentCorrect + congruentIncorrect;
+      const incongTotal = incongruentCorrect + incongruentIncorrect;
+      const congruentAccuracy   = congTotal > 0 ? congruentCorrect / congTotal : overallAccuracy;
+      const incongruentAccuracy = incongTotal > 0 ? incongruentCorrect / incongTotal : overallAccuracy;
+      // interferenceEffect: how much worse on incongruent vs congruent (clamped 0–1)
+      const interferenceEffect = Math.max(0, Math.min(1, congruentAccuracy - incongruentAccuracy));
+      // adjustedAccuracy: blends overall accuracy with inhibitory control performance
+      const adjustedAccuracy = (overallAccuracy * 0.6) + ((1 - interferenceEffect) * 0.4);
+
+      // Speed score and final formula unchanged
       const speedScore = Math.max(0, Math.min(1, (1200 - medianRt) / 800));
-      const rawScore = accuracy * 0.7 + speedScore * 0.3;
+      const rawScore = adjustedAccuracy * 0.7 + speedScore * 0.3;
       score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
     }
 
@@ -728,9 +772,10 @@ function runStroop({ durationSec = 60, onDone }) {
 
 // ===============================
 // PVT Game
+// CHANGE 3: Lapse threshold reduced from 500ms to 450ms
 // ===============================
 function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone }) {
-  const LAPSE_THRESHOLD_MS = 500;
+  const LAPSE_THRESHOLD_MS = 450; // CHANGE 3: was 500ms, now 450ms for greater sensitivity
 
   hide("explainSection");
   show("gameSection");
@@ -757,7 +802,7 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     <div id="pvtFeedback" style="text-align:center; min-height:28px; font-size:16px; margin-top:8px;"></div>
     <div class="hint" style="text-align:center; margin-top:12px;">
       Responses: <b id="pvtResponses">0</b> &nbsp;|&nbsp;
-      Lapses (&gt;500ms): <b id="pvtLapses">0</b> &nbsp;|&nbsp;
+      Lapses (&gt;450ms): <b id="pvtLapses">0</b> &nbsp;|&nbsp;
       False starts: <b id="pvtFalseStarts">0</b>
     </div>
     <div class="hint" style="text-align:center; margin-top:4px;">
@@ -922,9 +967,40 @@ function symptomPenalty(symptoms) {
   return Math.max(0, Math.min(12, total));
 }
 
-function computeOverall(results) {
-  // Weighted average: SDMT 25%, NBack 15%, Stroop 25%, PVT 35%
-  const weights = { pvt: 0.35, sdmt: 0.25, stroop: 0.25, nback: 0.15 };
+// CHANGE 5: Sleep hours penalty
+// Returns penalty points based on reported sleep duration.
+function sleepHoursPenalty(sleepHours) {
+  if (sleepHours === null || sleepHours === undefined || isNaN(sleepHours)) return 0;
+  if (sleepHours >= 7 && sleepHours <= 9) return 0;
+  if (sleepHours > 9)                     return 2;
+  if (sleepHours >= 6)                    return 3;
+  if (sleepHours >= 5)                    return 6;
+  return 10; // < 5 hours
+}
+
+// CHANGE 6: Shift hours penalty
+// Returns penalty points based on how far into the shift the user is.
+function shiftHoursPenalty(hoursIntoShift) {
+  if (hoursIntoShift === null || hoursIntoShift === undefined || isNaN(hoursIntoShift)) return 0;
+  if (hoursIntoShift < 6)  return 0;
+  if (hoursIntoShift < 8)  return 2;
+  if (hoursIntoShift < 10) return 5;
+  if (hoursIntoShift < 12) return 8;
+  return 12; // 12+ hours
+}
+
+// CHANGE 7: Circadian time-of-day multiplier
+// Applies a reduction based on known circadian performance troughs.
+function circadianMultiplier() {
+  const hour = new Date().getHours(); // local time
+  if (hour >= 0 && hour < 6)  return 0.92; // deep night trough
+  if (hour >= 18)              return 0.96; // evening decline
+  return 1.00;                              // normal daytime hours
+}
+
+function computeOverall(results, sleepHours, hoursIntoShift) {
+  // CHANGE 2: Updated weights — PVT 35%, Stroop 25%, SDMT 20%, 2-Back 20%
+  const weights = { pvt: 0.35, sdmt: 0.20, stroop: 0.25, nback: 0.20 };
   let total = 0;
   let wSum  = 0;
   for (const [key, w] of Object.entries(weights)) {
@@ -934,7 +1010,22 @@ function computeOverall(results) {
       wSum  += w;
     }
   }
-  return wSum > 0 ? Math.round(total / wSum) : 0;
+  let overallScoreRaw = wSum > 0 ? Math.round(total / wSum) : 0;
+
+  // CHANGE 7: Apply circadian multiplier first
+  overallScoreRaw = Math.round(overallScoreRaw * circadianMultiplier());
+
+  // CHANGE 5 & 6: Calculate sleep and shift penalties, cap combined at 18
+  const sleepPenalty = sleepHoursPenalty(sleepHours);
+  const shiftPenalty = shiftHoursPenalty(hoursIntoShift);
+  const combinedContextPenalty = Math.min(sleepPenalty + shiftPenalty, 18);
+
+  // Symptom penalty (unchanged, max 12)
+  const symPenalty = symptomPenalty(SESSION.symptoms);
+
+  // Final score: context penalties + symptom penalty
+  const totalPenalty = combinedContextPenalty + symPenalty;
+  return Math.max(0, Math.min(100, overallScoreRaw - totalPenalty));
 }
 
 function scoreToBand(score) {
@@ -987,9 +1078,8 @@ function showResultsScreen() {
   const stroop = GAME_RESULTS.stroop;
   const pvt    = GAME_RESULTS.pvt;
 
-  const overallScoreRaw = computeOverall(GAME_RESULTS);
-  const symptomPenaltyScore = symptomPenalty(SESSION.symptoms);
-  const overallScore = Math.max(0, Math.min(100, overallScoreRaw - symptomPenaltyScore));
+  // Pass stored check-in values into computeOverall for context penalties
+  const overallScore = computeOverall(GAME_RESULTS, SESSION.sleepHours, SESSION.hoursIntoShift);
   const band         = scoreToBand(overallScore);
   const advice       = scoreToAdvice(overallScore, band);
   const bColour      = bandColour(band);
