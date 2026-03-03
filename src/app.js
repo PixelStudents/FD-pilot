@@ -111,7 +111,21 @@ function formatCountdown(ms) {
   const hh = String(Math.floor(s / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return \\`\${hh}:${mm}:${ss}\`;
+  return `${hh}:${mm}:${ss}`;
+}
+
+function getTodayKeyUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate()
+  ).padStart(2, "0")}`;
+}
+
+function incrementSessionCountToday(aliasHash) {
+  const key = `sessions_${aliasHash}_${getTodayKeyUTC()}`;
+  const n = getSessionCountToday(aliasHash) + 1;
+  localStorage.setItem(key, String(n));
+  return n;
 }
 
 function deviceInfo() {
@@ -618,13 +632,13 @@ function runStroop({ durationSec = 60, onDone }) {
 
   gameTitle.textContent = "Stroop Colour Task";
 
-  const btnHTML = COLOURS.map(
-    (c) => `<button class="stroopBtn" data-colour="${c.name}"
-      style="width:120px; height:54px; font-size:18px; font-weight:700;
-             background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
-      ${c.name}
-    </button>"
-  ).join("");
+const btnHTML = COLOURS.map(
+  (c) => `<button class="stroopBtn" data-colour="${c.name}"
+    style="width:120px; height:54px; font-size:18px; font-weight:700;
+           background:${c.hex}; color:#fff; border:none; border-radius:10px; cursor:pointer;">
+    ${c.name}
+  </button>`
+).join("");
 
   gameUI.innerHTML = `
     <p class="hint" style="text-align:center;">Tap the button matching the <b>ink colour</b> — ignore the word.</p>
