@@ -671,7 +671,7 @@ function runPVT({ durationSec = 60, minDelaySec = 2, maxDelaySec = 10, onDone })
     const medianRt   = median(reactionTimes);
     const lapseRate  = trials > 0 ? lapses / trials : 0;
     const fsRate     = trials > 0 ? falseStarts / trials : 0;
-    const speedScore   = clamp01((700 - medianRt) / (700 - 200));
+    const speedScore   = clamp01((700 - medianRt) / (700 - 250));
     const lapsePenalty = clamp01(lapseRate * 1.2);
     const fsPenalty    = clamp01(fsRate * 0.4);
     const rawScore     = speedScore * (1 - clamp01(lapsePenalty + fsPenalty));
