@@ -1,5 +1,5 @@
 {
-  "APP_VERSION": "0.2.1",
+  "APP_VERSION": "0.2.2",
   "COOLDOWN_HOURS": 2,
   "HASHING": {
     "salt": "reading-uni-fatigue-pilot-2026-7f3a9c2d0e1b4a6c9d8e7f6a5b4c3d2e"
