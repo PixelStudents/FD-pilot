@@ -748,7 +748,7 @@ function computeOverall(results, checkinData) {
 }
 
 function scoreToBand(score) {
-  if (score >= 80) return "Green";
+  if (score >= 75) return "Green";
   if (score >= 60) return "Amber";
   if (score >= 40) return "Amber-Red";
   return "Red";
