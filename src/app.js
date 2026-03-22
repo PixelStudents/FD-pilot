@@ -325,12 +325,12 @@ function runSDMT({ durationSec = 60, trialTimeoutSec = 4, onDone }) {
     if (attempts >= 10) {
       const clamp0to100 = (x) => Math.max(0, Math.min(100, x));
       const effective = correct - 0.25 * incorrect;
-      // CHANGE 1: Updated piecewise curve
+      // CHANGE 1: Updated piecewise curve (v0.2.2 - softened lower ramp)
       let mappedScore = 0;
-      if      (effective <= 15) { mappedScore = 0; }
-      else if (effective <= 35) { mappedScore = ((effective - 15) / 20) * 60; }
-      else if (effective <= 45) { mappedScore = 60 + ((effective - 35) / 10) * 25; }
-      else                      { mappedScore = 85 + ((effective - 45) / 5) * 15; }
+      if      (effective <= 10) { mappedScore = 0; }
+      else if (effective <= 25) { mappedScore = 10 + ((effective - 10) / 15) * 50; }
+      else if (effective <= 40) { mappedScore = 60 + ((effective - 25) / 15) * 25; }
+      else                      { mappedScore = 85 + ((effective - 40) / 5) * 15; }
       score = clamp0to100(Math.round(mappedScore));
     }
     onDone?.({ correct, incorrect, trials, score_0_100: score });
@@ -437,7 +437,7 @@ function runNBack({ rounds = 25, nBack = 2, onDone }) {
     setButtons(false);
     const targetCount = sequence.filter((_, i) => i >= nBack && sequence[i] === sequence[i - nBack]).length;
     const rawScore = targetCount > 0 ? (hits - falseAlarms) / targetCount : 0;
-    let score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+    let score = Math.max(20, Math.min(100, Math.round(rawScore * 100)));
     if (rounds < 20) score = null;
     onDone?.({ hits, misses, false_alarms: falseAlarms, score_0_100: score });
   }
