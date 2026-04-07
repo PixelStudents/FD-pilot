@@ -38,16 +38,20 @@
         <h2>Check-in</h2>
 
         <div class="grid">
-          <label>How many hours did you sleep last night? (hours)
-            <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
-          </label>
-
-          <!-- CHANGE 2: Broken sleep follow-up -->
-          <fieldset style="border:none;margin:0;padding:0;">
-            <legend style="font-size:inherit;font-weight:600;margin-bottom:4px;">Was your sleep broken?</legend>
-            <label style="margin-right:16px;"><input type="radio" name="brokenSleep" id="brokenSleepYes" value="yes" /> Yes</label>
-            <label><input type="radio" name="brokenSleep" id="brokenSleepNo" value="no" /> No</label>
-          </fieldset>
+          <!-- Sleep hours + broken sleep grouped together in one grid cell -->
+          <div>
+            <label>How many hours did you sleep last night? (hours)
+              <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
+            </label>
+            <!-- CHANGE 2: Broken sleep follow-up directly beneath sleep hours -->
+            <div style="margin-top:10px;">
+              <span style="font-weight:600;font-size:inherit;">Was your sleep broken?</span>
+              <div style="margin-top:6px;display:flex;gap:20px;">
+                <label style="font-weight:normal;"><input type="radio" name="brokenSleep" id="brokenSleepYes" value="yes" /> Yes</label>
+                <label style="font-weight:normal;"><input type="radio" name="brokenSleep" id="brokenSleepNo" value="no" /> No</label>
+              </div>
+            </div>
+          </div>
 
           <label>How long is your shift today? (hours)
             <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
