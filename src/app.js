@@ -133,6 +133,18 @@ function incrementSessionCountToday(aliasHash) {
   return n;
 }
 
+// CHANGE 5 (calibration notice): helpers to track total session count across all days
+function getTotalSessionCount(aliasHash) {
+  return Number(localStorage.getItem(`total_sessions_${aliasHash}`) || "0");
+}
+
+function incrementTotalSessionCount(aliasHash) {
+  const key = `total_sessions_${aliasHash}`;
+  const n = getTotalSessionCount(aliasHash) + 1;
+  localStorage.setItem(key, String(n));
+  return n;
+}
+
 function getCooldownUntilMs(aliasHash) {
   const v = localStorage.getItem(`cooldown_until_${aliasHash}`);
   return v ? Number(v) : 0;
@@ -184,6 +196,7 @@ let SESSION = {
   aliasHash: "",
   sessionId: "",
   sessionNumberToday: 0,
+  totalSessionNumber: 0, // CHANGE 5 (calibration notice): track total sessions
   isFirstToday: false,
   symptoms: [],
   checkin: {}
@@ -812,7 +825,15 @@ function showResultsScreen() {
     [RESULTS_ENTRY.advice_text]:         advice
   });
 
+  // CHANGE 5 (calibration notice): show notice if fewer than 4 total sessions
+  const calibrationHTML = SESSION.totalSessionNumber < 4
+    ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;line-height:1.5;color:#6d4c00;">
+        <b>Calibration notice:</b> Your first few sessions help establish your personal baseline. Scores during this period may not yet fully reflect your typical performance as you become familiar with the tasks.
+      </div>`
+    : "";
+
   document.getElementById("resultsSummary").innerHTML = `
+    ${calibrationHTML}
     <div style="text-align:center;padding:16px 0 8px;">
       <div style="font-size:64px;font-weight:900;color:${bColour};">${overallScore}</div>
       <div style="font-size:22px;font-weight:700;color:${bColour};margin-top:4px;">${band}</div>
@@ -863,8 +884,6 @@ function showResultsScreen() {
 
 // ===============================
 // MAIN
-// Only change: SESSION.checkin populated at check-in submit.
-// Everything else is completely unchanged.
 // ===============================
 async function main() {
   await loadConfig();
@@ -926,11 +945,18 @@ async function main() {
     const motivation_scale   = Number(document.getElementById("motivation").value || "");
     const age                = Number(document.getElementById("age").value        || "");
 
+    // NEW FIELDS: gender and broken sleep
+    const gender             = document.getElementById("gender").value || "";
+    const brokenSleepEl      = document.querySelector('input[name="brokenSleep"]:checked');
+    const broken_sleep       = brokenSleepEl ? brokenSleepEl.value : "";
+
     if (age) cacheAgeIfProvided(SESSION.aliasHash, age);
 
     SESSION.sessionId          = uuidv4();
     SESSION.sessionNumberToday = incrementSessionCountToday(SESSION.aliasHash);
     SESSION.isFirstToday       = SESSION.sessionNumberToday === 1;
+    // CHANGE 5 (calibration notice): increment and store total session count
+    SESSION.totalSessionNumber = incrementTotalSessionCount(SESSION.aliasHash);
 
     const payload = {
       timestamp_utc: new Date().toISOString(),
@@ -942,13 +968,15 @@ async function main() {
       is_first_session_today: SESSION.isFirstToday,
       checkin: {
         sleep_hours:        Number.isFinite(sleep_hours)        ? sleep_hours        : null,
+        broken_sleep:       broken_sleep,
         shift_length_hours: Number.isFinite(shift_length_hours) ? shift_length_hours : null,
         hours_into_shift:   Number.isFinite(hours_into_shift)   ? hours_into_shift   : null,
         caffeine_level,
         fatigue_scale:      Number.isFinite(fatigue_scale)      ? fatigue_scale      : null,
         motivation_scale:   Number.isFinite(motivation_scale)   ? motivation_scale   : null,
         symptoms:           selectedSymptoms(),
-        age:                Number.isFinite(age)                ? age                : null
+        age:                Number.isFinite(age)                ? age                : null,
+        gender:             gender
       }
     };
 
