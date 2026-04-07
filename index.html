@@ -42,6 +42,13 @@
             <input id="sleepHours" type="number" min="0" max="24" step="0.5" />
           </label>
 
+          <!-- CHANGE 2: Broken sleep follow-up -->
+          <fieldset style="border:none;margin:0;padding:0;">
+            <legend style="font-size:inherit;font-weight:600;margin-bottom:4px;">Was your sleep broken?</legend>
+            <label style="margin-right:16px;"><input type="radio" name="brokenSleep" id="brokenSleepYes" value="yes" /> Yes</label>
+            <label><input type="radio" name="brokenSleep" id="brokenSleepNo" value="no" /> No</label>
+          </fieldset>
+
           <label>How long is your shift today? (hours)
             <input id="shiftLen" type="number" min="0" max="24" step="0.5" />
           </label>
@@ -50,7 +57,9 @@
             <input id="hoursInto" type="number" min="0" max="24" step="0.5" />
           </label>
 
+          <!-- CHANGE 3: Caffeine clarification note -->
           <label>How much caffeine have you had in the last 4 hours?
+            <span class="hint" style="display:block;font-weight:normal;font-size:13px;margin-top:2px;margin-bottom:4px;">This includes coffee, tea, energy drinks, and other caffeinated drinks.</span>
             <select id="caffeine">
               <option value="">Select…</option>
               <option value="none">None</option>
@@ -64,12 +73,24 @@
             <input id="fatigue" type="number" min="0" max="10" step="1" />
           </label>
 
-          <label>How motivated/alert do you feel right now? (0–10) (0=not at all, 10=extremely)
+          <!-- CHANGE 4: Removed "/alert" from motivation label -->
+          <label>How motivated do you feel right now? (0–10) (0=not at all, 10=extremely)
             <input id="motivation" type="number" min="0" max="10" step="1" />
           </label>
 
           <label>Age (years) — asked once
             <input id="age" type="number" min="16" max="90" step="1" />
+          </label>
+
+          <!-- CHANGE 1: Gender selection field after age -->
+          <label>What is your gender?
+            <select id="gender">
+              <option value="">Select…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="non-binary">Non-binary</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
           </label>
         </div>
 
